@@ -9,3 +9,4 @@ aiohttp
 gunicorn
 openai
 psycopg2-binary
+wsgi
