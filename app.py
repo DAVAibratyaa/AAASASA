@@ -8,10 +8,10 @@ from flask import (
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade
 from oauthlib.oauth2 import WebApplicationClient
+# If you actually use these:
 from anthropic import Anthropic
 from openai import AsyncOpenAI
 import asyncio
-from flask_wtf.csrf import CSRFProtect  # <-- REMOVED csrf_exempt import
 from functools import wraps
 
 # --------------------------------------------------------------------------------
@@ -32,9 +32,6 @@ app.config["SQLALCHEMY_MAX_OVERFLOW"] = 40
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-
-# Keep CSRFProtect, but do NOT use csrf_exempt
-csrf = CSRFProtect(app)
 
 # --------------------------------------------------------------------------------
 # OAuth2 Setup (Google)
@@ -147,7 +144,7 @@ def generate_report_anthropic(exame, achados):
 # --------------------------------------------------------------------------------
 @app.route("/")
 def index():
-    """If user is logged in, go to profile; otherwise render the index page."""
+    """If user is logged in, go to profile; otherwise, show index."""
     if "user_id" in session:
         return redirect(url_for("profile"))
     return render_template("index.html")
@@ -193,7 +190,6 @@ def callback():
     userinfo_response = requests.get(uri, headers=headers, data=body)
     userinfo = userinfo_response.json()
 
-    # Extract user data
     unique_id = userinfo["sub"]
     users_email = userinfo["email"]
     users_name = userinfo["given_name"]
@@ -205,7 +201,7 @@ def callback():
     session["user_name"] = users_name
     session["user_picture"] = users_picture
 
-    # Check if user already exists
+    # Check if user is in DB
     user = User.query.filter_by(unique_id=unique_id).first()
     if not user:
         user = User(
@@ -255,7 +251,6 @@ def profile():
         },
     )
 
-# REMOVED: @csrf_exempt
 @app.route("/generate_report", methods=["GET", "POST"])
 @login_required
 def generate_report():
@@ -288,7 +283,7 @@ def generate_report():
         try:
             db.session.add(report)
             user.total_reports += 1
-            user.total_time_saved += 0.09  # example increment
+            user.total_time_saved += 0.09
             db.session.commit()
             logger.info(f"Relatório salvo com sucesso para o usuário {user.id}")
             flash('Relatório gerado com sucesso!', 'success')
@@ -299,8 +294,13 @@ def generate_report():
             flash('Ocorreu um erro ao salvar o relatório. Por favor, tente novamente.', 'danger')
             return redirect(url_for('generate_report'))
 
-    templates = Template.query.filter_by(user_id=user.id).all()
-    return render_template("generate_report.html", user_picture=user.picture, templates=templates)
+    # GET
+    templates_list = Template.query.filter_by(user_id=user.id).all()
+    return render_template(
+        "generate_report.html",
+        user_picture=user.picture,
+        templates=templates_list
+    )
 
 @app.route('/result/<int:report_id>')
 @login_required
@@ -313,7 +313,7 @@ def result(report_id):
 
     report = Report.query.get_or_404(report_id)
     if report.user_id != user.id:
-        flash("Acesso não autorizado a este relatório.", "danger")
+        flash("Acesso não autorizado.", "danger")
         return redirect(url_for('generate_report'))
 
     return render_template('result.html', laudo=report.laudo, user_picture=user.picture)
@@ -375,13 +375,13 @@ def get_report(report_id):
         "laudo": report.laudo
     }), 200
 
-# REMOVED: @csrf_exempt
+# IMPORTANT: Set endpoint="templates"
 @app.route("/templates", methods=["GET", "POST"], endpoint="templates")
 @login_required
 def templates_route():
     """
     Renders or handles creation/update of templates used to generate reports.
-    Setting endpoint="templates" allows url_for('templates') in the template.
+    We set endpoint="templates" so calls can do url_for('templates').
     """
     user = User.query.filter_by(unique_id=session.get("user_id")).first()
 
@@ -391,61 +391,60 @@ def templates_route():
         template_id = request.form.get("template_id")
 
         if template_id:
-            template = Template.query.get(template_id)
-            if template.user_id != user.id:
+            tmpl = Template.query.get(template_id)
+            if tmpl.user_id != user.id:
                 flash("Acesso não autorizado para editar este template.", "danger")
                 return redirect(url_for("templates"))
-            template.name = template_name
-            template.content = template_content
+            tmpl.name = template_name
+            tmpl.content = template_content
         else:
-            template = Template(
+            tmpl = Template(
                 name=template_name,
                 content=template_content,
                 user_id=user.id,
             )
-            db.session.add(template)
+            db.session.add(tmpl)
 
         try:
             db.session.commit()
             flash("Template salvo com sucesso!", "success")
         except Exception as e:
             db.session.rollback()
-            flash("Falha ao salvar o template no banco de dados.", "danger")
             logger.error(f"Erro ao salvar template no banco de dados: {str(e)}")
+            flash("Falha ao salvar o template no banco de dados.", "danger")
 
         return redirect(url_for("templates"))
 
-    else:
-        templates = Template.query.filter_by(user_id=user.id).all()
-        return render_template("templates.html", templates=templates, user_picture=user.picture)
+    # GET
+    user_templates = Template.query.filter_by(user_id=user.id).all()
+    return render_template("templates.html", templates=user_templates, user_picture=user.picture)
 
 @app.route("/template/<int:template_id>", methods=["GET", "DELETE"])
 @login_required
 def template_detail(template_id):
     """Returns or deletes a template as JSON."""
     user = User.query.filter_by(unique_id=session.get("user_id")).first()
-    template = Template.query.get_or_404(template_id)
+    tmpl = Template.query.get_or_404(template_id)
 
-    if template.user_id != user.id:
+    if tmpl.user_id != user.id:
         return jsonify({"error": "Acesso não autorizado"}), 401
 
     if request.method == "GET":
         return jsonify({
-            "id": template.id,
-            "name": template.name,
-            "content": template.content
+            "id": tmpl.id,
+            "name": tmpl.name,
+            "content": tmpl.content
         })
 
     if request.method == "DELETE":
         try:
-            db.session.delete(template)
+            db.session.delete(tmpl)
             db.session.commit()
             return jsonify({"success": "Template deletado"}), 200
         except Exception as e:
             db.session.rollback()
             return jsonify({"error": str(e)}), 500
 
-# REMOVED: @csrf_exempt
 @app.route('/search_laudos')
 @login_required
 def search_laudos():
@@ -455,7 +454,7 @@ def search_laudos():
     if not query:
         return jsonify({'error': 'Consulta vazia.'}), 400
 
-    reports = Report.query.filter(
+    results = Report.query.filter(
         Report.user_id == user.id,
         (Report.exame.ilike(f'%{query}%') |
          Report.achados.ilike(f'%{query}%') |
@@ -463,20 +462,16 @@ def search_laudos():
     ).all()
 
     return jsonify([{
-        'id': report.id,
-        'exame': report.exame,
-        'achados': report.achados,
-        'laudo': report.laudo
-    } for report in reports])
+        'id': r.id,
+        'exame': r.exame,
+        'achados': r.achados,
+        'laudo': r.laudo
+    } for r in results])
 
-# REMOVED: @csrf_exempt
 @app.route('/apply_suggestion', methods=["POST"])
 @login_required
 def apply_suggestion():
-    """
-    Applies a suggestion to the current laudo text.
-    You can extend this to integrate GPT or other models for more advanced merging.
-    """
+    """Applies a suggestion to the current laudo text (example logic)."""
     data = request.get_json()
     current_laudo = data.get('current_laudo', '')
     suggestion = data.get('suggestion', '')
@@ -485,16 +480,12 @@ def apply_suggestion():
         return jsonify({"error": "Sugestão inválida."}), 400
 
     updated_laudo = f"{current_laudo}\n\nSugestão: {suggestion}"
-    return jsonify({
-        "laudo": updated_laudo,
-        "suggestions": []
-    }), 200
+    return jsonify({"laudo": updated_laudo, "suggestions": []}), 200
 
-# REMOVED: @csrf_exempt
 @app.route('/save_laudo', methods=["POST"])
 @login_required
 def save_laudo():
-    """Saves the laudo text back to the last user report."""
+    """Saves laudo text to the last user report."""
     data = request.get_json()
     laudo = data.get('laudo', '')
 
@@ -502,11 +493,11 @@ def save_laudo():
     if not user:
         return jsonify({"error": "Usuário não encontrado."}), 404
 
-    report = Report.query.filter_by(user_id=user.id).order_by(Report.created_at.desc()).first()
-    if not report:
-        return jsonify({"error": "Nenhum relatório encontrado para salvar."}), 404
+    last_report = Report.query.filter_by(user_id=user.id).order_by(Report.created_at.desc()).first()
+    if not last_report:
+        return jsonify({"error": "Nenhum relatório encontrado."}), 404
 
-    report.laudo = laudo
+    last_report.laudo = laudo
     try:
         db.session.commit()
         return jsonify({"message": "Laudo salvo com sucesso!"}), 200
@@ -520,20 +511,16 @@ def save_laudo():
 # --------------------------------------------------------------------------------
 @app.errorhandler(404)
 def not_found_error(e):
-    """Renders the custom 404 error template."""
     return render_template("404.html"), 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    """Renders the custom 500 error template."""
     return render_template("500.html"), 500
 
 # --------------------------------------------------------------------------------
 # Main Execution
 # --------------------------------------------------------------------------------
 if __name__ == "__main__":
-    # Garante a criação/migração do banco no primeiro start
     with app.app_context():
         upgrade()
-
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
