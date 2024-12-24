@@ -217,7 +217,7 @@
         <div class="modal-overlay absolute inset-0" onclick="closeModal()"></div>
         <div class="modal-content relative">
             <span class="close-btn" onclick="closeModal()">&times;</span>
-            <form id="templateForm" method="POST" action="{{ url_for('templates') }}">
+            <form id="templateForm" method="POST" action="{{ url_for('templates_route') }}">
                 <h2 class="text-2xl font-semibold mb-6 text-center">Novo Template</h2>
                 <div class="mb-4">
                     <label for="template_name" class="block text-gray-200 text-sm font-bold mb-2">Nome do Template:</label>
