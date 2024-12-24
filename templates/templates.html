@@ -1,417 +1,166 @@
-<!DOCTYPE html>
-<html lang="pt-BR" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LaudAI: Meus Templates</title>
-    <meta name="description" content="LaudAI - Gerenciamento de Templates para Laudos Radiológicos">
-    <meta name="keywords" content="radiologia, inteligência artificial, laudos, ia, templates, laudos radiológicos">
+{% extends "base.html" %}
+{% block title %}LaudAI - Gerar Laudo{% endblock %}
+{% block content %}
+<div x-data="{ activeTab: 'noTemplate', isLoading: false, showNotification: false, message: '', selectedTemplate: '', templateContent: '', exameContent: '', userExame: '' }" class="container mx-auto p-6 sm:p-8 md:p-10 lg:p-12 xl:p-14 space-y-8">
+    <header class="space-y-4 text-center md:text-left">
+        <h1 class="scroll-m-20 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Gerar Laudo
+        </h1>
+        <p class="text-lg sm:text-xl text-muted-foreground">Crie laudos médicos com precisão e eficiência.</p>
+    </header>
 
-    <!-- Analytics Scripts -->
-    <script type="text/javascript">
-        (function(c,l,a,r,i,t,y){
-            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-        })(window, document, "clarity", "script", "minhe2vwf7");
-    </script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SVQW9L8T8E"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-SVQW9L8T8E');
-    </script>
-
-    <!-- Fonts and Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Tailwind CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
-
-    <!-- Custom Styles -->
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #121827;
-            color: #f9fafb;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        .glass-card {
-            background: rgba(31, 41, 55, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-        .glass-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        .logo-text {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #f9fafb;
-            padding: 0.5rem 1rem;
-            border: 2px solid #f9fafb;
-            border-radius: 0.5rem;
-            transition: color 0.3s, border-color 0.3s;
-        }
-
-        .logo-text:hover {
-            color: #3b82f6;
-            border-color: #3b82f6;
-        }
-
-        .search-bar {
-            background-color: rgba(75, 85, 99, 0.5);
-            border: none;
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            color: #f9fafb;
-            font-size: 1rem;
-            transition: background-color 0.3s;
-        }
-
-        .search-bar:focus {
-            outline: none;
-            background-color: rgba(75, 85, 99, 0.7);
-        }
-
-        .btn-primary {
-            background-color: #3b82f6;
-            color: #ffffff;
-            transition: background-color 0.3s, transform 0.3s;
-        }
-
-        .btn-primary:hover {
-            background-color: #2563eb;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background-color: #10b981;
-            color: #ffffff;
-            transition: background-color 0.3s, transform 0.3s;
-        }
-
-        .btn-secondary:hover {
-            background-color: #059669;
-            transform: translateY(-2px);
-        }
-
-        .btn-danger {
-            background-color: #ef4444;
-            color: #ffffff;
-            transition: background-color 0.3s, transform 0.3s;
-        }
-
-        .btn-danger:hover {
-            background-color: #dc2626;
-            transform: translateY(-2px);
-        }
-
-        .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background-color: #1f2937;
-            border-radius: 1rem;
-            padding: 2rem;
-            position: relative;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            font-size: 1.5rem;
-            color: #f9fafb;
-            cursor: pointer;
-            transition: color 0.3s;
-        }
-
-        .close-btn:hover {
-            color: #3b82f6;
-        }
-
-        .footer-link {
-            color: #fbbf24;
-            transition: color 0.3s;
-        }
-
-        .footer-link:hover {
-            color: #f59e0b;
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 w-full bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg z-50">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="#" class="logo-text hover:scale-105 transform transition duration-300">
-                LaudAI
-            </a>
-            <div class="flex space-x-6">
-                <a href="{{ url_for('index') }}" class="text-gray-300 hover:text-blue-400 transition duration-300">Início</a>
-                <a href="{{ url_for('logout') }}" class="text-gray-300 hover:text-blue-400 transition duration-300 flex items-center">
-                    <i class="fas fa-sign-out-alt mr-2"></i> Sair
-                </a>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-6 py-24">
-        <div class="glass-card">
-            <div class="flex flex-col md:flex-row justify-between items-center mb-6">
-                <h1 class="text-3xl font-bold">Meus Templates</h1>
-                <input type="text" id="search" class="search-bar mt-4 md:mt-0 md:w-1/3" placeholder="Buscar templates..." oninput="filterTemplates()">
-            </div>
-            {% if templates %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="templateGrid">
-                {% for template in templates %}
-                <div class="glass-card">
-                    <h2 class="text-xl font-semibold mb-2">{{ template.name }}</h2>
-                    <p class="text-gray-300 mb-4 line-clamp-3">{{ template.content }}</p>
-                    <div class="flex justify-end space-x-2">
-                        <button class="btn-primary p-2 rounded-md flex items-center" onclick="previewTemplate({{ template.id }})">
-                            <i class="fas fa-eye mr-2"></i> Visualizar
-                        </button>
-                        <button class="btn-secondary p-2 rounded-md flex items-center" onclick="editTemplate({{ template.id }})">
-                            <i class="fas fa-edit mr-2"></i> Editar
-                        </button>
-                        <button class="btn-danger p-2 rounded-md flex items-center" onclick="deleteTemplate({{ template.id }})">
-                            <i class="fas fa-trash-alt mr-2"></i> Deletar
-                        </button>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-center text-gray-400">Nenhum template encontrado. Crie o seu primeiro!</p>
-            {% endif %}
-            <div class="text-center mt-8">
-                <button class="btn-primary px-6 py-3 rounded-full flex items-center justify-center" onclick="showCreateTemplateForm()">
-                    <i class="fas fa-plus mr-2"></i> Novo Template
+    <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div class="p-4 sm:p-6">
+            <div class="inline-flex h-10 items-center justify-center rounded-md bg-zinc-100 p-1 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                <button @click="activeTab = 'noTemplate'"
+                        :class="{ 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50': activeTab === 'noTemplate' }"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm sm:text-base font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:ring-offset-zinc-950 dark:focus-visible:ring-zinc-300">
+                    <i class="fas fa-file-alt mr-2"></i>Sem Template
+                </button>
+                <button @click="activeTab = 'withTemplate'"
+                        :class="{ 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50': activeTab === 'withTemplate' }"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm sm:text-base font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:ring-offset-zinc-950 dark:focus-visible:ring-zinc-300">
+                    <i class="fas fa-file-invoice mr-2"></i>Com Template
                 </button>
             </div>
         </div>
-    </main>
 
-    <!-- Create Template Modal -->
-    <div id="templateModal" class="modal fixed inset-0 flex items-center justify-center hidden">
-        <div class="modal-overlay absolute inset-0" onclick="closeModal()"></div>
-        <div class="modal-content relative">
-            <span class="close-btn" onclick="closeModal()">&times;</span>
-            <!-- FIXED LINE HERE -->
-            <form id="templateForm" method="POST" action="{{ url_for('templates') }}">
-                <h2 class="text-2xl font-semibold mb-6 text-center">Novo Template</h2>
-                <div class="mb-4">
-                    <label for="template_name" class="block text-gray-200 text-sm font-bold mb-2">Nome do Template:</label>
-                    <input type="text" id="template_name" name="template_name" 
-                           class="w-full p-3 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-white" required>
+        <div class="p-4 sm:p-6 pt-0">
+            <!-- TAB 1: Sem Template -->
+            <div x-show="activeTab === 'noTemplate'" 
+                 x-transition:enter="transition ease-out duration-300" 
+                 x-transition:enter-start="opacity-0 transform scale-95" 
+                 x-transition:enter-end="opacity-100 transform scale-100"
+                 class="space-y-4 sm:space-y-6">
+                <div class="flex items-center p-3 sm:p-4 text-sm sm:text-base text-zinc-800 border-l-4 border-zinc-300 bg-zinc-50 dark:text-zinc-300 dark:border-zinc-700 dark:bg-zinc-800/30" role="alert">
+                    <i class="fas fa-info-circle mr-3"></i>
+                    <div>
+                        Crie um novo laudo personalizado sem usar um template predefinido.
+                    </div>
                 </div>
-                <div class="mb-6">
-                    <label for="template_content" class="block text-gray-200 text-sm font-bold mb-2">Conteúdo do Template:</label>
-                    <textarea id="template_content" name="template_content"
-                              class="w-full p-3 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-white" 
-                              rows="6" required></textarea>
-                </div>
-                <input type="hidden" id="template_id" name="template_id">
-                <div class="flex justify-end">
-                    <button type="submit" class="btn-primary px-4 py-2 rounded-md flex items-center">
-                        <i class="fas fa-save mr-2"></i> Criar Template
+                <!-- FORM: Sem Template -->
+                <form id="laudoForm" method="POST" action="{{ url_for('generate_report') }}"
+                      class="space-y-4 sm:space-y-6"
+                      @submit.prevent="isLoading = true; $el.submit();">
+                    <!-- ADD HIDDEN CSRF TOKEN -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="space-y-2">
+                        <label for="exame" class="text-sm sm:text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Exame:</label>
+                        <textarea id="exame" name="exame" rows="4"
+                                  x-model="userExame"
+                                  required
+                                  class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"></textarea>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="achados" class="text-sm sm:text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Achados:</label>
+                        <textarea id="achados" name="achados" rows="8"
+                                  required
+                                  class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"></textarea>
+                    </div>
+                    <input type="hidden" name="exame_hidden" :value="userExame + ' - POR FAVOR SIGA EXATAMENTE A MESMA FORMATAÇÃO, ESTRUTURA DO LAUDO E VOCABULÁRIO DO seguinte: ' + templateContent">
+                    <button type="submit"
+                            :disabled="isLoading"
+                            :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
+                            class="inline-flex items-center justify-center rounded-md text-sm sm:text-base font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 sm:px-6 py-2 w-full">
+                        <i :class="{ 'hidden': isLoading, 'fas fa-magic mr-2': !isLoading }"></i>
+                        <span x-text="isLoading ? 'Gerando Laudo...' : 'Gerar Laudo'"></span>
                     </button>
-                </div>
-            </form>
-        </div>
-    </div>
+                </form>
+            </div>
 
-    <!-- Edit Template Modal -->
-    <div id="editTemplateModal" class="modal fixed inset-0 flex items-center justify-center hidden">
-        <div class="modal-overlay absolute inset-0" onclick="closeEditTemplateModal()"></div>
-        <div class="modal-content relative">
-            <span class="close-btn" onclick="closeEditTemplateModal()">&times;</span>
-            <form id="editTemplateForm" method="POST" action="{{ url_for('templates') }}">
-                <h2 class="text-2xl font-semibold mb-6 text-center">Editar Template</h2>
-                <div class="mb-4">
-                    <label for="edit_template_name" class="block text-gray-200 text-sm font-bold mb-2">Nome do Template:</label>
-                    <input type="text" id="edit_template_name" name="edit_template_name" 
-                           class="w-full p-3 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-white" required>
+            <!-- TAB 2: Com Template -->
+            <div x-show="activeTab === 'withTemplate'" 
+                 x-transition:enter="transition ease-out duration-300" 
+                 x-transition:enter-start="opacity-0 transform scale-95" 
+                 x-transition:enter-end="opacity-100 transform scale-100"
+                 class="space-y-4 sm:space-y-6">
+                <div class="flex items-center p-3 sm:p-4 text-sm sm:text-base text-zinc-800 border-l-4 border-zinc-300 bg-zinc-50 dark:text-zinc-300 dark:border-zinc-700 dark:bg-zinc-800/30" role="alert">
+                    <i class="fas fa-lightbulb mr-3"></i>
+                    <div>
+                        Use um template predefinido para agilizar a criação do seu laudo.
+                    </div>
                 </div>
-                <div class="mb-6">
-                    <label for="edit_template_content" class="block text-gray-200 text-sm font-bold mb-2">Conteúdo do Template:</label>
-                    <textarea id="edit_template_content" name="edit_template_content"
-                              class="w-full p-3 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-white" 
-                              rows="6" required></textarea>
-                </div>
-                <input type="hidden" id="edit_template_id" name="edit_template_id">
-                <div class="flex justify-end">
-                    <button type="submit" class="btn-primary px-4 py-2 rounded-md flex items-center">
-                        <i class="fas fa-save mr-2"></i> Salvar Alterações
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="space-y-2">
+                        <label for="templateSelect" class="text-sm sm:text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Selecione um Template:</label>
+                        <select id="templateSelect"
+                                x-model="selectedTemplate"
+                                @change="loadTemplate"
+                                class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                            <option value="">Escolha um template</option>
+                            {% for template in templates %}
+                                <option value="{{ template.id }}">{{ template.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- FORM: Com Template -->
+                    <form id="templateForm" method="POST" action="{{ url_for('generate_report') }}"
+                          class="space-y-4 sm:space-y-6"
+                          @submit.prevent="isLoading = true; $el.submit();">
+                        <!-- ADD HIDDEN CSRF TOKEN -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <!-- Preview Template Modal -->
-    <div id="previewTemplateModal" class="modal fixed inset-0 flex items-center justify-center hidden">
-        <div class="modal-overlay absolute inset-0" onclick="closePreviewTemplateModal()"></div>
-        <div class="modal-content relative">
-            <span class="close-btn" onclick="closePreviewTemplateModal()">&times;</span>
-            <h2 class="text-2xl font-semibold mb-4 text-center">Preview do Template</h2>
-            <div id="previewContent" class="bg-gray-800 p-4 rounded mb-6 max-h-96 overflow-y-auto text-white"></div>
-            <div class="flex justify-center">
-                <button class="btn-secondary px-4 py-2 rounded-md" onclick="closePreviewTemplateModal()">Fechar</button>
+                        <div class="space-y-2">
+                            <label for="templateExame" class="text-sm sm:text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Exame:</label>
+                            <textarea id="templateExame" readonly rows="4"
+                                      placeholder="Template Selecionado"
+                                      class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 opacity-50"></textarea>
+                        </div>
+                        <div class="space-y-2">
+                            <label for="templateAchados" class="text-sm sm:text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Achados:</label>
+                            <textarea id="templateAchados" name="achados" rows="8" required
+                                      class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                            </textarea>
+                        </div>
+                        <input type="hidden" name="exame" :value="userExame + ' - POR FAVOR SIGA EXATAMENTE A MESMA FORMATAÇÃO, ESTRUTURA DO LAUDO E VOCABULÁRIO DO seguinte: ' + templateContent">
+                        <button type="submit"
+                                :disabled="isLoading"
+                                :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
+                                class="inline-flex items-center justify-center rounded-md text-sm sm:text-base font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 sm:px-6 py-2 w-full">
+                            <i :class="{ 'hidden': isLoading, 'fas fa-file-medical mr-2': !isLoading }"></i>
+                            <span x-text="isLoading ? 'Gerando Laudo...' : 'Gerar Laudo com Template'"></span>
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 bg-opacity-80 backdrop-filter backdrop-blur-lg py-6 mt-12">
-        <div class="max-w-7xl mx-auto text-center text-gray-400">
-            © 2024 LaudAI. Todos os direitos reservados.
-            <div class="mt-2">
-                <a href="{{ url_for('privacy') }}" class="footer-link mx-2">Política de Privacidade</a> |
-                <a href="{{ url_for('services') }}" class="footer-link mx-2">Termos de Serviço</a>
-            </div>
+    <div x-show="showNotification"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform scale-90"
+         x-transition:enter-end="opacity-100 transform scale-100"
+         x-transition:leave="transition ease-in duration-300"
+         x-transition:leave-start="opacity-100 transform scale-100"
+         x-transition:leave-end="opacity-0 transform scale-90"
+         class="fixed bottom-4 right-4 z-50 p-4 rounded-md bg-zinc-800 text-white shadow-lg">
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>
+            <span x-text="message"></span>
         </div>
-    </footer>
+    </div>
+</div>
 
-    <!-- Scripts -->
-    <script>
-        // Modal Handling
-        function showCreateTemplateForm() {
-            document.getElementById('templateModal').classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('templateModal').classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-        }
-
-        function showEditTemplateForm(templateId) {
-            fetch(`/template/${templateId}`)
+<script>
+    function loadTemplate() {
+        const selectedTemplateId = this.selectedTemplate;
+        if (selectedTemplateId) {
+            fetch(`/template/${selectedTemplateId}`)
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('edit_template_name').value = data.name;
-                    document.getElementById('edit_template_content').value = data.content;
-                    document.getElementById('edit_template_id').value = data.id;
-                    document.getElementById('editTemplateModal').classList.remove('hidden');
-                    document.body.classList.add('overflow-hidden');
+                    this.templateContent = data.content || '';
+                    this.showNotification = true;
+                    this.message = 'Template carregado com sucesso!';
+                    setTimeout(() => this.showNotification = false, 3000);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    this.showNotification = true;
+                    this.message = 'Erro ao carregar o template.';
+                    setTimeout(() => this.showNotification = false, 3000);
                 });
         }
-
-        function closeEditTemplateModal() {
-            document.getElementById('editTemplateModal').classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-        }
-
-        function showPreviewTemplateModal(content) {
-            document.getElementById('previewContent').innerHTML = content;
-            document.getElementById('previewTemplateModal').classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
-        }
-
-        function closePreviewTemplateModal() {
-            document.getElementById('previewTemplateModal').classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-        }
-
-        // Template Actions
-        function filterTemplates() {
-            let input = document.getElementById('search');
-            let filter = input.value.toLowerCase();
-            let cards = document.querySelectorAll('#templateGrid .glass-card');
-
-            cards.forEach(card => {
-                let title = card.querySelector('h2').textContent.toLowerCase();
-                if (title.includes(filter)) {
-                    card.parentElement.classList.remove('hidden');
-                } else {
-                    card.parentElement.classList.add('hidden');
-                }
-            });
-        }
-
-        function editTemplate(templateId) {
-            showEditTemplateForm(templateId);
-        }
-
-        function previewTemplate(templateId) {
-            fetch(`/template/${templateId}`)
-                .then(response => response.json())
-                .then(data => {
-                    const sanitizedContent = sanitizeHTML(data.content);
-                    showPreviewTemplateModal(`<h3 class="text-xl font-semibold mb-2">${data.name}</h3><p>${sanitizedContent}</p>`);
-                });
-        }
-
-        function deleteTemplate(templateId) {
-            if (confirm('Tem certeza que deseja excluir este template?')) {
-                fetch(`/template/${templateId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
-                    }
-                }).then(response => {
-                    if (response.ok) {
-                        location.reload();
-                    } else {
-                        alert('Falha ao excluir o template.');
-                    }
-                });
-            }
-        }
-
-        // Sanitize HTML to prevent XSS
-        function sanitizeHTML(str) {
-            var temp = document.createElement('div');
-            temp.textContent = str;
-            return temp.innerHTML;
-        }
-
-        // Close modals when clicking outside
-        window.onclick = function(event) {
-            let modals = ['templateModal', 'editTemplateModal', 'previewTemplateModal'];
-            modals.forEach(modalId => {
-                let modal = document.getElementById(modalId);
-                if (modal && event.target === modal.querySelector('.modal-overlay')) {
-                    modal.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden');
-                }
-            });
-        }
-
-        // Keyboard accessibility: Close modals with Esc key
-        window.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                ['templateModal', 'editTemplateModal', 'previewTemplateModal'].forEach(modalId => {
-                    let modal = document.getElementById(modalId);
-                    if (modal && !modal.classList.contains('hidden')) {
-                        modal.classList.add('hidden');
-                        document.body.classList.remove('overflow-hidden');
-                    }
-                });
-            }
-        });
-    </script>
-</body>
-</html>
+    }
+</script>
+{% endblock %}
