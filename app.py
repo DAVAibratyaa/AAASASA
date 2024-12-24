@@ -8,12 +8,11 @@ from flask import (
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade
 from oauthlib.oauth2 import WebApplicationClient
+from anthropic import Anthropic
+from openai import AsyncOpenAI
 import asyncio
+from flask_wtf.csrf import CSRFProtect
 from functools import wraps
-
-# If you're using Anthropic or OpenAI, uncomment:
-# from anthropic import Anthropic
-# from openai import AsyncOpenAI
 
 # --------------------------------------------------------------------------------
 # Logging Configuration
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Flask Application Setup
 # --------------------------------------------------------------------------------
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "sua_chave_secreta")  # change in production
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "sua_chave_secreta")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///app.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_POOL_SIZE"] = 20
@@ -33,6 +32,7 @@ app.config["SQLALCHEMY_MAX_OVERFLOW"] = 40
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+csrf = CSRFProtect(app)
 
 # --------------------------------------------------------------------------------
 # OAuth2 Setup (Google)
@@ -43,13 +43,13 @@ GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configura
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
 # --------------------------------------------------------------------------------
-# If you use Anthropic/OpenAI
+# API Clients: Anthropic & OpenAI
 # --------------------------------------------------------------------------------
-# anthropic_client = Anthropic(
-#     api_key=os.getenv("ANTHROPIC_API_KEY"),
-#     default_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
-# )
-# openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+anthropic_client = Anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+    default_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
+)
+openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # --------------------------------------------------------------------------------
 # Database Models
@@ -81,7 +81,7 @@ class Template(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
 # --------------------------------------------------------------------------------
-# Decorator for routes requiring login
+# Login-required Decorator
 # --------------------------------------------------------------------------------
 def login_required(f):
     @wraps(f)
@@ -97,24 +97,47 @@ def login_required(f):
 # --------------------------------------------------------------------------------
 @app.context_processor
 def inject_year():
-    """Injects get_year() for dynamic use in Jinja templates."""
+    """Injects the get_year() function for dynamic use in Jinja templates."""
     return dict(get_year=lambda: datetime.now().year)
 
 # --------------------------------------------------------------------------------
-# Placeholder for generating a laudo with Anthropic (or any AI)
+# Anthropic-based Report Generation
 # --------------------------------------------------------------------------------
 def generate_report_anthropic(exame, achados):
-    """Fake or real logic to generate a radiology report from given data."""
+    """Uses the Anthropic API to generate a radiology report from given data."""
     try:
-        logger.info(f"[FAKE] Generating report for exame: {exame[:50]} ...")
-        # If using real Anthropic, you'd do something like:
-        # response = anthropic_client.messages.create(...)
-        # return response.content[0].text
+        logger.info(f"Gerando relatório para exame: {exame[:50]}...")
+        system_prompt = os.getenv("SYSTEM_PROMPT")
+        if not system_prompt:
+            raise ValueError("A variável de ambiente SYSTEM_PROMPT não está definida")
 
-        # For now, just return a placeholder text:
-        return f"Laudo gerado para exame: {exame}, Achados: {achados}."
+        response = anthropic_client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=6000,
+            temperature=0.5,
+            system=[
+                {
+                    "type": "text",
+                    "text": "Você é um assistente de IA encarregado de gerar relatórios detalhados de radiologia.",
+                    "cache_control": {"type": "ephemeral"}
+                },
+                {
+                    "type": "text",
+                    "text": system_prompt,
+                    "cache_control": {"type": "ephemeral"}
+                }
+            ],
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Faça um laudo do seguinte exame:\n\n{exame}\n\nAchados: {achados}"
+                }
+            ]
+        )
+        logger.info("Relatório gerado com sucesso")
+        return response.content[0].text
     except Exception as e:
-        logger.error(f"Erro ao gerar relatório: {str(e)}")
+        logger.error(f"Erro ao gerar relatório com a API Anthropic: {str(e)}")
         return None
 
 # --------------------------------------------------------------------------------
@@ -122,14 +145,14 @@ def generate_report_anthropic(exame, achados):
 # --------------------------------------------------------------------------------
 @app.route("/")
 def index():
-    """If user is logged in, go to profile; otherwise, show index."""
+    """If user is logged in, go to profile; otherwise render the index page."""
     if "user_id" in session:
         return redirect(url_for("profile"))
     return render_template("index.html")
 
 @app.route("/login")
 def login():
-    """Starts Google OAuth login."""
+    """Starts the Google OAuth login process."""
     google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
     authorization_endpoint = google_provider_cfg["authorization_endpoint"]
     request_uri = client.prepare_request_uri(
@@ -145,7 +168,7 @@ def login():
 
 @app.route("/login/callback")
 def callback():
-    """OAuth callback route."""
+    """Callback route for the Google OAuth workflow."""
     code = request.args.get("code")
     google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
     token_endpoint = google_provider_cfg["token_endpoint"]
@@ -155,8 +178,12 @@ def callback():
         redirect_url=request.base_url,
         code=code,
     )
-    token_response = requests.post(token_url, headers=headers, data=body,
-                                   auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET))
+    token_response = requests.post(
+        token_url,
+        headers=headers,
+        data=body,
+        auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
+    )
     client.parse_request_body_response(token_response.text)
 
     userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
@@ -164,6 +191,7 @@ def callback():
     userinfo_response = requests.get(uri, headers=headers, data=body)
     userinfo = userinfo_response.json()
 
+    # Extract user data
     unique_id = userinfo["sub"]
     users_email = userinfo["email"]
     users_name = userinfo["given_name"]
@@ -175,7 +203,7 @@ def callback():
     session["user_name"] = users_name
     session["user_picture"] = users_picture
 
-    # Check if user is in DB
+    # Check if user already exists
     user = User.query.filter_by(unique_id=unique_id).first()
     if not user:
         user = User(
@@ -191,54 +219,60 @@ def callback():
 
 @app.route("/logout")
 def logout():
-    """Logs user out and clears session."""
+    """Logs the user out and clears the session."""
     session.clear()
-    flash('Você foi desconectado.', 'success')
+    flash('Você foi desconectado com sucesso.', 'success')
     return redirect(url_for("index"))
 
 @app.route("/profile")
 @login_required
 def profile():
-    """Shows user profile page."""
+    """Displays user profile with stats."""
     user = User.query.filter_by(unique_id=session.get("user_id")).first()
     if not user:
         session.clear()
-        flash('Usuário não encontrado.', 'danger')
+        flash('Usuário não encontrado. Faça login novamente.', 'danger')
         return redirect(url_for("login"))
+
+    total_reports = user.total_reports
+    time_saved = user.total_time_saved
+    ai_accuracy = 95  # example fixed value
 
     return render_template(
         "profile.html",
         user_picture=user.picture,
         current_user=user.name,
         user_email=user.email,
-        total_reports=user.total_reports,
-        time_saved=user.total_time_saved,
-        ai_accuracy=95,
+        total_reports=total_reports,
+        time_saved=time_saved,
+        ai_accuracy=ai_accuracy,
         achievements={
             "experienced_radiologist": user.total_reports > 100,
             "max_efficiency": user.total_time_saved > 10,
-            "exceptional_accuracy": 95 > 90,
+            "exceptional_accuracy": ai_accuracy > 90,
         },
     )
 
 @app.route("/generate_report", methods=["GET", "POST"])
 @login_required
 def generate_report():
-    """Generates a new radiology report from user input."""
-    logger.info("Entrando em generate_report")
+    """Route to generate a new report based on user input."""
+    logger.info("Entrando na função generate_report")
     user = User.query.filter_by(unique_id=session["user_id"]).first()
+    logger.info(f"Usuário {user.id} acessando generate_report")
 
     if request.method == "POST":
+        logger.info("Requisição POST recebida")
         exame = request.form.get("exame")
         achados = request.form.get("achados")
 
         if not exame or not achados:
-            flash('Preencha todos os campos obrigatórios.', 'danger')
+            flash('Por favor, preencha todos os campos obrigatórios.', 'danger')
             return redirect(url_for('generate_report'))
 
         laudo = generate_report_anthropic(exame, achados)
         if laudo is None:
-            flash('Falha ao gerar o laudo.', 'danger')
+            flash('Falha ao gerar o laudo. Tente novamente mais tarde.', 'danger')
             return redirect(url_for('generate_report'))
 
         report = Report(
@@ -247,23 +281,23 @@ def generate_report():
             laudo=laudo,
             user_id=user.id
         )
+
         try:
             db.session.add(report)
             user.total_reports += 1
-            user.total_time_saved += 0.09
+            user.total_time_saved += 0.09  # example increment
             db.session.commit()
-            flash('Laudo gerado com sucesso!', 'success')
+            logger.info(f"Relatório salvo com sucesso para o usuário {user.id}")
+            flash('Relatório gerado com sucesso!', 'success')
             return redirect(url_for('result', report_id=report.id))
         except Exception as e:
             db.session.rollback()
-            logger.error(f"DB error: {str(e)}")
-            flash('Erro ao salvar o laudo.', 'danger')
+            logger.error(f"Erro no banco de dados: {str(e)}")
+            flash('Ocorreu um erro ao salvar o relatório. Por favor, tente novamente.', 'danger')
             return redirect(url_for('generate_report'))
 
-    # GET method
-    templates_list = Template.query.filter_by(user_id=user.id).all()
-    return render_template("generate_report.html", templates=templates_list,
-                           user_picture=user.picture)
+    templates = Template.query.filter_by(user_id=user.id).all()
+    return render_template("generate_report.html", user_picture=user.picture, templates=templates)
 
 @app.route('/result/<int:report_id>')
 @login_required
@@ -276,27 +310,30 @@ def result(report_id):
 
     report = Report.query.get_or_404(report_id)
     if report.user_id != user.id:
-        flash("Acesso não autorizado.", "danger")
+        flash("Acesso não autorizado a este relatório.", "danger")
         return redirect(url_for('generate_report'))
 
     return render_template('result.html', laudo=report.laudo, user_picture=user.picture)
 
 @app.route('/privacy')
 def privacy():
+    """Privacy policy route."""
     return render_template('privacy.html')
 
 @app.route('/services')
 def services():
+    """Services page."""
     return render_template('services.html')
 
 @app.route('/carreiras')
 def carreiras():
+    """Careers page."""
     return render_template('carreiras.html')
 
 @app.route('/meus_laudos')
 @login_required
 def meus_laudos():
-    """Shows paginated user’s reports."""
+    """Displays paginated list of a user's reports."""
     user = User.query.filter_by(unique_id=session.get('user_id')).first()
     if not user:
         flash('Usuário não encontrado.', 'danger')
@@ -306,7 +343,7 @@ def meus_laudos():
     reports_paginated = (
         Report.query.filter_by(user_id=user.id)
         .order_by(Report.created_at.desc())
-        .paginate(page=page, per_page=10)
+        .paginate(page=page, per_page=25)
     )
 
     return render_template(
@@ -320,7 +357,7 @@ def meus_laudos():
 @app.route("/report/<int:report_id>", methods=["GET"])
 @login_required
 def get_report(report_id):
-    """Returns a JSON representation of a report (API usage)."""
+    """Returns JSON representation of a report (for API usage)."""
     user = User.query.filter_by(unique_id=session.get("user_id")).first()
     if not user:
         return jsonify({"error": "Acesso não autorizado"}), 401
@@ -335,12 +372,11 @@ def get_report(report_id):
         "laudo": report.laudo
     }), 200
 
-@app.route("/templates", methods=["GET", "POST"], endpoint="templates")
+@app.route("/templates", methods=["GET", "POST"])
 @login_required
 def templates_route():
     """
-    Manages the user’s templates. 
-    endpoint="templates" so you can do url_for('templates').
+    Renders or handles creation/update of templates used to generate reports.
     """
     user = User.query.filter_by(unique_id=session.get("user_id")).first()
 
@@ -350,70 +386,70 @@ def templates_route():
         template_id = request.form.get("template_id")
 
         if template_id:
-            tmpl = Template.query.get(template_id)
-            if tmpl.user_id != user.id:
+            template = Template.query.get(template_id)
+            if template.user_id != user.id:
                 flash("Acesso não autorizado para editar este template.", "danger")
-                return redirect(url_for("templates"))
-            tmpl.name = template_name
-            tmpl.content = template_content
+                return redirect(url_for("templates_route"))
+            template.name = template_name
+            template.content = template_content
         else:
-            tmpl = Template(
+            template = Template(
                 name=template_name,
                 content=template_content,
-                user_id=user.id
+                user_id=user.id,
             )
-            db.session.add(tmpl)
+            db.session.add(template)
 
         try:
             db.session.commit()
             flash("Template salvo com sucesso!", "success")
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Erro ao salvar template: {str(e)}")
-            flash("Falha ao salvar template.", "danger")
+            flash("Falha ao salvar o template no banco de dados.", "danger")
+            logger.error(f"Erro ao salvar template no banco de dados: {str(e)}")
 
-        return redirect(url_for("templates"))
+        return redirect(url_for("templates_route"))
 
-    # GET method
-    user_templates = Template.query.filter_by(user_id=user.id).all()
-    return render_template("templates.html", templates=user_templates, user_picture=user.picture)
+    else:
+        templates = Template.query.filter_by(user_id=user.id).all()
+        return render_template("templates.html", templates=templates, user_picture=user.picture)
 
 @app.route("/template/<int:template_id>", methods=["GET", "DELETE"])
 @login_required
 def template_detail(template_id):
     """Returns or deletes a template as JSON."""
     user = User.query.filter_by(unique_id=session.get("user_id")).first()
-    tmpl = Template.query.get_or_404(template_id)
+    template = Template.query.get_or_404(template_id)
 
-    if tmpl.user_id != user.id:
+    if template.user_id != user.id:
         return jsonify({"error": "Acesso não autorizado"}), 401
 
     if request.method == "GET":
         return jsonify({
-            "id": tmpl.id,
-            "name": tmpl.name,
-            "content": tmpl.content
+            "id": template.id,
+            "name": template.name,
+            "content": template.content
         })
 
     if request.method == "DELETE":
         try:
-            db.session.delete(tmpl)
+            db.session.delete(template)
             db.session.commit()
             return jsonify({"success": "Template deletado"}), 200
         except Exception as e:
             db.session.rollback()
             return jsonify({"error": str(e)}), 500
 
-@app.route('/search_laudos', methods=["GET"])
+@app.route('/search_laudos')
 @login_required
 def search_laudos():
-    """Simple search on the user’s reports, returns JSON."""
+    """Search in the user's reports by query parameter."""
     user = User.query.filter_by(unique_id=session.get('user_id')).first()
     query = request.args.get('query', '')
     if not query:
         return jsonify({'error': 'Consulta vazia.'}), 400
 
-    results = Report.query.filter(
+    reports = Report.query.filter(
         Report.user_id == user.id,
         (Report.exame.ilike(f'%{query}%') |
          Report.achados.ilike(f'%{query}%') |
@@ -421,16 +457,19 @@ def search_laudos():
     ).all()
 
     return jsonify([{
-        'id': r.id,
-        'exame': r.exame,
-        'achados': r.achados,
-        'laudo': r.laudo
-    } for r in results])
+        'id': report.id,
+        'exame': report.exame,
+        'achados': report.achados,
+        'laudo': report.laudo
+    } for report in reports])
 
 @app.route('/apply_suggestion', methods=["POST"])
 @login_required
 def apply_suggestion():
-    """Applies a suggestion to the laudo text (example logic)."""
+    """
+    Applies a suggestion to the current laudo text. 
+    You can extend this to integrate GPT or other models for more advanced merging.
+    """
     data = request.get_json()
     current_laudo = data.get('current_laudo', '')
     suggestion = data.get('suggestion', '')
@@ -438,14 +477,16 @@ def apply_suggestion():
     if not suggestion:
         return jsonify({"error": "Sugestão inválida."}), 400
 
-    # Example: just append the suggestion
     updated_laudo = f"{current_laudo}\n\nSugestão: {suggestion}"
-    return jsonify({"laudo": updated_laudo, "suggestions": []}), 200
+    return jsonify({
+        "laudo": updated_laudo,
+        "suggestions": []
+    }), 200
 
 @app.route('/save_laudo', methods=["POST"])
 @login_required
 def save_laudo():
-    """Saves laudo text to the last user report."""
+    """Saves the laudo text back to the last user report."""
     data = request.get_json()
     laudo = data.get('laudo', '')
 
@@ -453,34 +494,39 @@ def save_laudo():
     if not user:
         return jsonify({"error": "Usuário não encontrado."}), 404
 
-    last_report = Report.query.filter_by(user_id=user.id).order_by(Report.created_at.desc()).first()
-    if not last_report:
-        return jsonify({"error": "Nenhum relatório encontrado."}), 404
+    report = Report.query.filter_by(user_id=user.id).order_by(Report.created_at.desc()).first()
+    if not report:
+        return jsonify({"error": "Nenhum relatório encontrado para salvar."}), 404
 
-    last_report.laudo = laudo
+    report.laudo = laudo
     try:
         db.session.commit()
         return jsonify({"message": "Laudo salvo com sucesso!"}), 200
     except Exception as e:
         db.session.rollback()
         logger.error(f"Erro ao salvar laudo: {str(e)}")
-        return jsonify({"error": "Falha ao salvar."}), 500
+        return jsonify({"error": "Falha ao salvar o laudo."}), 500
 
 # --------------------------------------------------------------------------------
 # Error Handlers
 # --------------------------------------------------------------------------------
 @app.errorhandler(404)
 def not_found_error(e):
+    """Renders the custom 404 error template."""
     return render_template("404.html"), 404
 
 @app.errorhandler(500)
 def internal_error(e):
+    """Renders the custom 500 error template."""
     return render_template("500.html"), 500
 
 # --------------------------------------------------------------------------------
 # Main Execution
 # --------------------------------------------------------------------------------
 if __name__ == "__main__":
+    # Ensure DB migrations are applied at startup
     with app.app_context():
         upgrade()
+
+    # Run the dev server (for production, use gunicorn or another WSGI server)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
