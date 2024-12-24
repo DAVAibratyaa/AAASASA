@@ -11,6 +11,7 @@ from oauthlib.oauth2 import WebApplicationClient
 from anthropic import Anthropic
 from openai import AsyncOpenAI
 import asyncio
+from flask_wtf.csrf import CSRFProtect  # <-- REMOVED csrf_exempt import
 from functools import wraps
 
 # --------------------------------------------------------------------------------
@@ -31,6 +32,9 @@ app.config["SQLALCHEMY_MAX_OVERFLOW"] = 40
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+# Keep CSRFProtect, but do NOT use csrf_exempt
+csrf = CSRFProtect(app)
 
 # --------------------------------------------------------------------------------
 # OAuth2 Setup (Google)
@@ -95,7 +99,7 @@ def login_required(f):
 # --------------------------------------------------------------------------------
 @app.context_processor
 def inject_year():
-    """Injects the get_year() function for dynamic use in Jinja templates."""
+    """Injects get_year() for dynamic use in Jinja templates."""
     return dict(get_year=lambda: datetime.now().year)
 
 # --------------------------------------------------------------------------------
@@ -251,6 +255,7 @@ def profile():
         },
     )
 
+# REMOVED: @csrf_exempt
 @app.route("/generate_report", methods=["GET", "POST"])
 @login_required
 def generate_report():
@@ -370,11 +375,13 @@ def get_report(report_id):
         "laudo": report.laudo
     }), 200
 
-@app.route("/templates", methods=["GET", "POST"])
+# REMOVED: @csrf_exempt
+@app.route("/templates", methods=["GET", "POST"], endpoint="templates")
 @login_required
 def templates_route():
     """
     Renders or handles creation/update of templates used to generate reports.
+    Setting endpoint="templates" allows url_for('templates') in the template.
     """
     user = User.query.filter_by(unique_id=session.get("user_id")).first()
 
@@ -387,7 +394,7 @@ def templates_route():
             template = Template.query.get(template_id)
             if template.user_id != user.id:
                 flash("Acesso não autorizado para editar este template.", "danger")
-                return redirect(url_for("templates_route"))
+                return redirect(url_for("templates"))
             template.name = template_name
             template.content = template_content
         else:
@@ -406,7 +413,7 @@ def templates_route():
             flash("Falha ao salvar o template no banco de dados.", "danger")
             logger.error(f"Erro ao salvar template no banco de dados: {str(e)}")
 
-        return redirect(url_for("templates_route"))
+        return redirect(url_for("templates"))
 
     else:
         templates = Template.query.filter_by(user_id=user.id).all()
@@ -438,10 +445,11 @@ def template_detail(template_id):
             db.session.rollback()
             return jsonify({"error": str(e)}), 500
 
+# REMOVED: @csrf_exempt
 @app.route('/search_laudos')
 @login_required
 def search_laudos():
-    """Search in the user's reports by query parameter."""
+    """Search in the user's reports by query parameter, returning JSON."""
     user = User.query.filter_by(unique_id=session.get('user_id')).first()
     query = request.args.get('query', '')
     if not query:
@@ -461,11 +469,12 @@ def search_laudos():
         'laudo': report.laudo
     } for report in reports])
 
+# REMOVED: @csrf_exempt
 @app.route('/apply_suggestion', methods=["POST"])
 @login_required
 def apply_suggestion():
     """
-    Applies a suggestion to the current laudo text. 
+    Applies a suggestion to the current laudo text.
     You can extend this to integrate GPT or other models for more advanced merging.
     """
     data = request.get_json()
@@ -481,6 +490,7 @@ def apply_suggestion():
         "suggestions": []
     }), 200
 
+# REMOVED: @csrf_exempt
 @app.route('/save_laudo', methods=["POST"])
 @login_required
 def save_laudo():
@@ -522,9 +532,8 @@ def internal_error(e):
 # Main Execution
 # --------------------------------------------------------------------------------
 if __name__ == "__main__":
-    # Ensure DB migrations are applied at startup
+    # Garante a criação/migração do banco no primeiro start
     with app.app_context():
         upgrade()
 
-    # Run the dev server (for production, use gunicorn or another WSGI server)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
