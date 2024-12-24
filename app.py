@@ -8,11 +8,15 @@ from flask import (
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade
 from oauthlib.oauth2 import WebApplicationClient
+
 # If you actually use these:
 from anthropic import Anthropic
 from openai import AsyncOpenAI
 import asyncio
 from functools import wraps
+
+# 1) ADD THIS IMPORT
+from flask_wtf.csrf import CSRFProtect
 
 # --------------------------------------------------------------------------------
 # Logging Configuration
@@ -29,6 +33,9 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///app
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_POOL_SIZE"] = 20
 app.config["SQLALCHEMY_MAX_OVERFLOW"] = 40
+
+# 2) INITIALIZE CSRF
+csrf = CSRFProtect(app)
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
