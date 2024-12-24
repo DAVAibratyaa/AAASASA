@@ -11,7 +11,7 @@ from oauthlib.oauth2 import WebApplicationClient
 from anthropic import Anthropic
 from openai import AsyncOpenAI
 import asyncio
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, csrf_exempt
 from functools import wraps
 
 # --------------------------------------------------------------------------------
@@ -97,7 +97,7 @@ def login_required(f):
 # --------------------------------------------------------------------------------
 @app.context_processor
 def inject_year():
-    """Injects the get_year() function for dynamic use in Jinja templates."""
+    """Injects get_year() for dynamic use in Jinja templates."""
     return dict(get_year=lambda: datetime.now().year)
 
 # --------------------------------------------------------------------------------
@@ -253,6 +253,7 @@ def profile():
         },
     )
 
+@csrf_exempt  # Exempts from CSRF to avoid missing token error
 @app.route("/generate_report", methods=["GET", "POST"])
 @login_required
 def generate_report():
@@ -372,11 +373,13 @@ def get_report(report_id):
         "laudo": report.laudo
     }), 200
 
-@app.route("/templates", methods=["GET", "POST"])
+@csrf_exempt  # Exempts from CSRF so url_for('templates') won't produce missing token error
+@app.route("/templates", methods=["GET", "POST"], endpoint="templates")
 @login_required
 def templates_route():
     """
     Renders or handles creation/update of templates used to generate reports.
+    Setting endpoint="templates" allows url_for('templates') calls in the template.
     """
     user = User.query.filter_by(unique_id=session.get("user_id")).first()
 
@@ -389,7 +392,7 @@ def templates_route():
             template = Template.query.get(template_id)
             if template.user_id != user.id:
                 flash("Acesso não autorizado para editar este template.", "danger")
-                return redirect(url_for("templates_route"))
+                return redirect(url_for("templates"))
             template.name = template_name
             template.content = template_content
         else:
@@ -408,7 +411,7 @@ def templates_route():
             flash("Falha ao salvar o template no banco de dados.", "danger")
             logger.error(f"Erro ao salvar template no banco de dados: {str(e)}")
 
-        return redirect(url_for("templates_route"))
+        return redirect(url_for("templates"))
 
     else:
         templates = Template.query.filter_by(user_id=user.id).all()
@@ -440,10 +443,11 @@ def template_detail(template_id):
             db.session.rollback()
             return jsonify({"error": str(e)}), 500
 
+@csrf_exempt  # Exempts from CSRF for JSON-based POST
 @app.route('/search_laudos')
 @login_required
 def search_laudos():
-    """Search in the user's reports by query parameter."""
+    """Search in the user's reports by query parameter, returning JSON."""
     user = User.query.filter_by(unique_id=session.get('user_id')).first()
     query = request.args.get('query', '')
     if not query:
@@ -463,11 +467,12 @@ def search_laudos():
         'laudo': report.laudo
     } for report in reports])
 
+@csrf_exempt  # Exempts from CSRF for JSON-based POST
 @app.route('/apply_suggestion', methods=["POST"])
 @login_required
 def apply_suggestion():
     """
-    Applies a suggestion to the current laudo text. 
+    Applies a suggestion to the current laudo text.
     You can extend this to integrate GPT or other models for more advanced merging.
     """
     data = request.get_json()
@@ -483,6 +488,7 @@ def apply_suggestion():
         "suggestions": []
     }), 200
 
+@csrf_exempt  # Exempts from CSRF for JSON-based POST
 @app.route('/save_laudo', methods=["POST"])
 @login_required
 def save_laudo():
