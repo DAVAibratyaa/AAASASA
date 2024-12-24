@@ -11,7 +11,7 @@ from oauthlib.oauth2 import WebApplicationClient
 from anthropic import Anthropic
 from openai import AsyncOpenAI
 import asyncio
-from flask_wtf.csrf import CSRFProtect, csrf_exempt
+from flask_wtf.csrf import CSRFProtect
 from functools import wraps
 
 # --------------------------------------------------------------------------------
@@ -97,7 +97,7 @@ def login_required(f):
 # --------------------------------------------------------------------------------
 @app.context_processor
 def inject_year():
-    """Injects get_year() for dynamic use in Jinja templates."""
+    """Injects the get_year() function for dynamic use in Jinja templates."""
     return dict(get_year=lambda: datetime.now().year)
 
 # --------------------------------------------------------------------------------
@@ -253,7 +253,6 @@ def profile():
         },
     )
 
-@csrf_exempt  # Exempts from CSRF to avoid missing token error
 @app.route("/generate_report", methods=["GET", "POST"])
 @login_required
 def generate_report():
@@ -373,13 +372,15 @@ def get_report(report_id):
         "laudo": report.laudo
     }), 200
 
-@csrf_exempt  # Exempts from CSRF so url_for('templates') won't produce missing token error
+# -- THIS IS THE KEY FIX FOR THE /templates ROUTE --
 @app.route("/templates", methods=["GET", "POST"], endpoint="templates")
 @login_required
 def templates_route():
     """
     Renders or handles creation/update of templates used to generate reports.
-    Setting endpoint="templates" allows url_for('templates') calls in the template.
+
+    NOTE: We set 'endpoint="templates"' so that you can call url_for('templates') 
+    in your templates without a BuildError.
     """
     user = User.query.filter_by(unique_id=session.get("user_id")).first()
 
@@ -443,11 +444,10 @@ def template_detail(template_id):
             db.session.rollback()
             return jsonify({"error": str(e)}), 500
 
-@csrf_exempt  # Exempts from CSRF for JSON-based POST
 @app.route('/search_laudos')
 @login_required
 def search_laudos():
-    """Search in the user's reports by query parameter, returning JSON."""
+    """Search in the user's reports by query parameter."""
     user = User.query.filter_by(unique_id=session.get('user_id')).first()
     query = request.args.get('query', '')
     if not query:
@@ -467,7 +467,6 @@ def search_laudos():
         'laudo': report.laudo
     } for report in reports])
 
-@csrf_exempt  # Exempts from CSRF for JSON-based POST
 @app.route('/apply_suggestion', methods=["POST"])
 @login_required
 def apply_suggestion():
@@ -488,7 +487,6 @@ def apply_suggestion():
         "suggestions": []
     }), 200
 
-@csrf_exempt  # Exempts from CSRF for JSON-based POST
 @app.route('/save_laudo', methods=["POST"])
 @login_required
 def save_laudo():
