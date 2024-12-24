@@ -11,7 +11,6 @@ from oauthlib.oauth2 import WebApplicationClient
 from anthropic import Anthropic
 from openai import AsyncOpenAI
 import asyncio
-from flask_wtf.csrf import CSRFProtect
 from functools import wraps
 
 # --------------------------------------------------------------------------------
@@ -32,7 +31,6 @@ app.config["SQLALCHEMY_MAX_OVERFLOW"] = 40
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-csrf = CSRFProtect(app)
 
 # --------------------------------------------------------------------------------
 # OAuth2 Setup (Google)
