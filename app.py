@@ -1,7 +1,10 @@
 import os
 import requests
 import logging
-from flask import Flask, request, render_template, redirect, url_for, flash, session, jsonify
+from datetime import datetime
+from flask import (
+    Flask, request, render_template, redirect, url_for, flash, session, jsonify
+)
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade
 from oauthlib.oauth2 import WebApplicationClient
@@ -16,6 +19,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# --------------------------------------------------------------------------------
+# Configurações Flask
+# --------------------------------------------------------------------------------
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "sua_chave_secreta")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///app.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -27,22 +34,26 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
 
-# Configuração OAuth2 do Google
+# --------------------------------------------------------------------------------
+# OAuth2 do Google
+# --------------------------------------------------------------------------------
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
-# Cliente API Anthropic
+# --------------------------------------------------------------------------------
+# API Clients: Anthropic & OpenAI
+# --------------------------------------------------------------------------------
 anthropic_client = Anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
     default_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
 )
-
-# Cliente API OpenAI
 openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# --------------------------------------------------------------------------------
 # Modelos de Banco de Dados
+# --------------------------------------------------------------------------------
 class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     exame = db.Column(db.Text, nullable=True)
@@ -66,7 +77,9 @@ class Template(db.Model):
     content = db.Column(db.Text, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
-# Decorador para proteger rotas que requerem login
+# --------------------------------------------------------------------------------
+# Decorador para Rotas que Requerem Login
+# --------------------------------------------------------------------------------
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -76,15 +89,27 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Função para gerar relatório usando Anthropic API
+# --------------------------------------------------------------------------------
+# Context Processor para {{ get_year() }}
+# --------------------------------------------------------------------------------
+@app.context_processor
+def inject_year():
+    """
+    Injeta a função get_year() em todos os templates do Jinja.
+    """
+    return dict(get_year=lambda: datetime.now().year)
+
+# --------------------------------------------------------------------------------
+# Função para Gerar Relatório via Anthropic
+# --------------------------------------------------------------------------------
 def generate_report_anthropic(exame, achados):
     try:
         logger.info(f"Gerando relatório para exame: {exame[:50]}...")
         system_prompt = os.getenv("SYSTEM_PROMPT")
-
         if not system_prompt:
             raise ValueError("A variável de ambiente SYSTEM_PROMPT não está definida")
 
+        # Exemplo de chamada à API Anthropic
         response = anthropic_client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=6000,
@@ -114,8 +139,9 @@ def generate_report_anthropic(exame, achados):
         logger.error(f"Erro ao gerar relatório com a API Anthropic: {str(e)}")
         return None
 
-# --- Rotas ---
-
+# --------------------------------------------------------------------------------
+# Rotas
+# --------------------------------------------------------------------------------
 @app.route("/")
 def index():
     if "user_id" in session:
@@ -165,11 +191,13 @@ def callback():
     users_name = userinfo["given_name"]
     users_picture = userinfo["picture"]
 
+    # Salva dados do usuário em sessão
     session["user_id"] = unique_id
     session["user_email"] = users_email
     session["user_name"] = users_name
     session["user_picture"] = users_picture
 
+    # Verifica se usuário já existe no banco; se não, cria novo
     user = User.query.filter_by(unique_id=unique_id).first()
     if not user:
         user = User(
@@ -199,7 +227,7 @@ def profile():
         return redirect(url_for("login"))
     total_reports = user.total_reports
     time_saved = user.total_time_saved
-    ai_accuracy = 95
+    ai_accuracy = 95  # Exemplo fixo, pode ser variável
     return render_template(
         "profile.html",
         user_picture=user.picture,
@@ -232,10 +260,8 @@ def generate_report():
             return redirect(url_for('generate_report'))
 
         laudo = generate_report_anthropic(exame, achados)
-
         if laudo is None:
             flash('Falha ao gerar o laudo. Tente novamente mais tarde.', 'danger')
-            # FIXED: Changed 'generate_report_route' -> 'generate_report'
             return redirect(url_for('generate_report'))
 
         report = Report(
@@ -257,7 +283,6 @@ def generate_report():
             db.session.rollback()
             logger.error(f"Erro no banco de dados: {str(e)}")
             flash('Ocorreu um erro ao salvar o relatório. Por favor, tente novamente.', 'danger')
-            # FIXED: Changed 'generate_report_route' -> 'generate_report'
             return redirect(url_for('generate_report'))
 
     templates = Template.query.filter_by(user_id=user.id).all()
@@ -424,7 +449,7 @@ def apply_suggestion():
     if not suggestion:
         return jsonify({"error": "Sugestão inválida."}), 400
 
-    # Exemplo simples: concatenar a sugestão ao laudo existente
+    # Exemplo simples: Concatenar a sugestão ao laudo existente
     updated_laudo = f"{current_laudo}\n\nSugestão: {suggestion}"
 
     return jsonify({
@@ -442,7 +467,7 @@ def save_laudo():
     if not user:
         return jsonify({"error": "Usuário não encontrado."}), 404
 
-    # Encontrar o último relatório do usuário para atualizar
+    # Exemplo: Encontra o último relatório do usuário e atualiza
     report = Report.query.filter_by(user_id=user.id).order_by(Report.created_at.desc()).first()
     if not report:
         return jsonify({"error": "Nenhum relatório encontrado para salvar."}), 404
@@ -456,9 +481,9 @@ def save_laudo():
         logger.error(f"Erro ao salvar laudo: {str(e)}")
         return jsonify({"error": "Falha ao salvar o laudo."}), 500
 
-# ------------------------------------------------------------------------------
-# Error Handlers for 404 and 500 (Matching Your Templates 404.html / 500.html)
-# ------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# Error Handlers (404 e 500)
+# --------------------------------------------------------------------------------
 @app.errorhandler(404)
 def not_found_error(e):
     return render_template("404.html"), 404
@@ -467,10 +492,13 @@ def not_found_error(e):
 def internal_error(e):
     return render_template("500.html"), 500
 
-# ------------------------------------------------------------------------------
-# Inicialização da Aplicação
-# ------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# Execução da Aplicação
+# --------------------------------------------------------------------------------
 if __name__ == "__main__":
+    # Garante a criação/migração do banco no primeiro start
     with app.app_context():
         upgrade()
+
+    # Rodar localmente (ou use gunicorn em produção)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
