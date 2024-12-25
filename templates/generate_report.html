@@ -26,6 +26,7 @@
         </div>
 
         <div class="p-4 sm:p-6 pt-0">
+            <!-- Sem Template -->
             <div x-show="activeTab === 'noTemplate'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-100 transform scale-100" class="space-y-4 sm:space-y-6">
                 <div class="flex items-center p-3 sm:p-4 text-sm sm:text-base text-zinc-800 border-l-4 border-zinc-300 bg-zinc-50 dark:text-zinc-300 dark:border-zinc-700 dark:bg-zinc-800/30" role="alert">
                     <i class="fas fa-info-circle mr-3"></i>
@@ -34,6 +35,9 @@
                     </div>
                 </div>
                 <form id="laudoForm" method="POST" action="{{ url_for('generate_report') }}" class="space-y-4 sm:space-y-6" @submit.prevent="isLoading = true; $el.submit();">
+                    <!-- Hidden CSRF token -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                     <div class="space-y-2">
                         <label for="exame" class="text-sm sm:text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Exame:</label>
                         <textarea id="exame" name="exame" rows="4" x-model="userExame" required class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"></textarea>
@@ -50,6 +54,7 @@
                 </form>
             </div>
 
+            <!-- Com Template -->
             <div x-show="activeTab === 'withTemplate'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-100 transform scale-100" class="space-y-4 sm:space-y-6">
                 <div class="flex items-center p-3 sm:p-4 text-sm sm:text-base text-zinc-800 border-l-4 border-zinc-300 bg-zinc-50 dark:text-zinc-300 dark:border-zinc-700 dark:bg-zinc-800/30" role="alert">
                     <i class="fas fa-lightbulb mr-3"></i>
@@ -68,6 +73,9 @@
                         </select>
                     </div>
                     <form id="templateForm" method="POST" action="{{ url_for('generate_report') }}" class="space-y-4 sm:space-y-6" @submit.prevent="isLoading = true; $el.submit();">
+                        <!-- Hidden CSRF token -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                         <div class="space-y-2">
                             <label for="templateExame" class="text-sm sm:text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Exame:</label>
                             <textarea id="templateExame" readonly rows="4" placeholder="Template Selecionado" class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 opacity-50"></textarea>
