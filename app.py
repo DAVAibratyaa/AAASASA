@@ -15,7 +15,7 @@ from openai import AsyncOpenAI
 import asyncio
 from functools import wraps
 
-# 1) ADD THIS IMPORT
+# ---- CRITICAL: Import CSRFProtect from Flask-WTF
 from flask_wtf.csrf import CSRFProtect
 
 # --------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_POOL_SIZE"] = 20
 app.config["SQLALCHEMY_MAX_OVERFLOW"] = 40
 
-# 2) INITIALIZE CSRF
+# ---- CRITICAL: Initialize CSRFProtect
 csrf = CSRFProtect(app)
 
 db = SQLAlchemy(app)
