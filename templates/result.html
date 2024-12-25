@@ -43,17 +43,24 @@
                 <div class="space-y-4 sm:space-y-6">
                     <div class="flex flex-col space-y-4">
                         <h2 class="text-xl sm:text-2xl font-semibold text-primary">Laudo Gerado:</h2>
-                        <div id="laudoContent" class="bg-muted p-4 rounded-md whitespace-pre-wrap max-h-96 overflow-y-auto text-sm sm:text-base">
-                            {{ laudo | safe }}
+                        <!-- 
+                            We use `{{ laudo|escape }}` so any <tags> in laudo appear as plain text.
+                            We apply 'whitespace-pre-wrap' so line breaks are preserved. 
+                        -->
+                        <div id="laudoContent" 
+                             class="bg-muted p-4 rounded-md whitespace-pre-wrap max-h-96 overflow-y-auto text-sm sm:text-base">
+                            {{ laudo|escape }}
                         </div>
                     </div>
                     <!-- Action Buttons -->
                     <div class="flex space-x-2 justify-center">
-                        <button @click="copyToClipboard('laudoContent')" :disabled="isLoading" class="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-md shadow hover:bg-primary/90 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <button @click="copyToClipboard('laudoContent')" :disabled="isLoading"
+                                class="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-md shadow hover:bg-primary/90 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary">
                             <i class="fas fa-copy"></i>
                             <span>Copiar Laudo</span>
                         </button>
-                        <button @click="transferToEditor()" :disabled="isLoading" class="flex items-center space-x-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md shadow hover:bg-secondary/90 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-secondary">
+                        <button @click="transferToEditor()" :disabled="isLoading"
+                                class="flex items-center space-x-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md shadow hover:bg-secondary/90 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-secondary">
                             <i class="fas fa-edit"></i>
                             <span>Editar no Editor</span>
                         </button>
@@ -101,7 +108,9 @@
                         </div>
                         <div>
                             <div x-show="!showMarkdownPreview" x-transition>
-                                <div id="editor" contenteditable="true" @input="updateEditorContent" class="editor-content bg-white dark:bg-zinc-800 p-4 rounded-md overflow-y-auto text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary border border-gray-300 dark:border-zinc-700"></div>
+                                <div id="editor" contenteditable="true" @input="updateEditorContent"
+                                     class="editor-content bg-white dark:bg-zinc-800 p-4 rounded-md overflow-y-auto text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary border border-gray-300 dark:border-zinc-700">
+                                </div>
                             </div>
                             <div x-show="showMarkdownPreview" x-transition>
                                 <div id="preview" class="editor-content bg-white dark:bg-zinc-800 p-4 rounded-md overflow-y-auto text-sm sm:text-base border border-gray-300 dark:border-zinc-700" x-html="marked(editorContent)"></div>
@@ -110,19 +119,23 @@
                     </div>
                     <!-- Action Buttons -->
                     <div class="flex space-x-2 justify-center">
-                        <button @click="copyToClipboard('editorContent')" :disabled="isLoading" class="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-md shadow hover:bg-primary/90 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <button @click="copyToClipboard('editorContent')" :disabled="isLoading"
+                                class="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-md shadow hover:bg-primary/90 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary">
                             <i class="fas fa-copy"></i>
                             <span>Copiar do Editor</span>
                         </button>
-                        <button @click="saveLaudo()" :disabled="isLoading" class="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md shadow hover:bg-green-700 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-600">
+                        <button @click="saveLaudo()" :disabled="isLoading"
+                                class="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md shadow hover:bg-green-700 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-600">
                             <i class="fas fa-save"></i>
                             <span>Salvar Laudo</span>
                         </button>
-                        <button @click="exportPDF()" :disabled="isLoading" class="flex items-center space-x-2 px-4 py-2 bg-yellow-500 text-white rounded-md shadow hover:bg-yellow-600 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                        <button @click="exportPDF()" :disabled="isLoading"
+                                class="flex items-center space-x-2 px-4 py-2 bg-yellow-500 text-white rounded-md shadow hover:bg-yellow-600 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-500">
                             <i class="fas fa-file-pdf"></i>
                             <span>Exportar PDF</span>
                         </button>
-                        <button @click="resetEditor()" :disabled="isLoading" class="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-600">
+                        <button @click="resetEditor()" :disabled="isLoading"
+                                class="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-600">
                             <i class="fas fa-eraser"></i>
                             <span>Resetar Editor</span>
                         </button>
@@ -155,7 +168,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<!-- (We already have references to the same JS logic in the snippet below) -->
 <script>
     function resultPage() {
         return {
@@ -165,7 +177,8 @@
             notificationMessage: '',
             showMarkdownPreview: false,
             isDarkMode: false,
-            editorContent: '{{ laudo | safe | escape | replace("\n", "\\n") }}',
+            // Escape the laudo so any <tag> doesn't get rendered as HTML
+            editorContent: '{{ laudo | escape | replace("\n", "\\n") }}',
             characterCount: 0,
 
             init() {
@@ -179,7 +192,8 @@
             copyToClipboard(elementId) {
                 let text;
                 if (elementId === 'editorContent') {
-                    text = this.editorContent.replace(/<[^>]*>?/gm, ''); // Remove HTML tags
+                    // Remove any HTML that might exist
+                    text = this.editorContent.replace(/<[^>]*>?/gm, '');
                 } else {
                     const element = document.getElementById(elementId);
                     text = element.innerText;
@@ -196,7 +210,8 @@
             },
 
             transferToEditor() {
-                const content = document.getElementById('laudoContent').innerHTML;
+                // We get text from the laudoContent <div>, which is escaped, but preserve line breaks
+                const content = document.getElementById('laudoContent').textContent;
                 this.editorContent = content;
                 this.activeTab = 'editor';
                 this.notificationMessage = 'Conteúdo transferido para o editor!';
@@ -237,10 +252,11 @@
                         method: "POST",
                         headers: {
                             'Content-Type': 'application/json',
-                            // Include CSRF token
                             'X-CSRFToken': '{{ csrf_token() }}'
                         },
-                        body: JSON.stringify({ laudo: this.editorContent })
+                        body: JSON.stringify({
+                            laudo: this.editorContent
+                        })
                     });
 
                     const data = await response.json();
@@ -268,10 +284,11 @@
                         method: "POST",
                         headers: {
                             'Content-Type': 'application/json',
-                            // Include CSRF token
                             'X-CSRFToken': '{{ csrf_token() }}'
                         },
-                        body: JSON.stringify({ laudo: this.editorContent })
+                        body: JSON.stringify({
+                            laudo: this.editorContent
+                        })
                     });
 
                     if (response.ok) {
@@ -302,7 +319,8 @@
 
             resetEditor() {
                 if (confirm('Tem certeza de que deseja resetar o editor? Todas as alterações não salvas serão perdidas.')) {
-                    this.editorContent = '{{ laudo | safe | escape | replace("\n", "\\n") }}';
+                    // Revert to the original laudo content:
+                    this.editorContent = '{{ laudo | escape | replace("\n", "\\n") }}';
                     this.updateEditorDisplay();
                     this.notificationMessage = 'Editor resetado para o conteúdo original.';
                     this.showNotification = true;
@@ -319,8 +337,6 @@
         }
     }
 </script>
-<!-- Include marked.js for Markdown parsing -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<!-- Include FontAwesome for icons -->
 <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 {% endblock %}
