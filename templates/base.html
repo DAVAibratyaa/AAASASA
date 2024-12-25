@@ -1,112 +1,451 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark bg-zinc-900 text-zinc-100 h-full w-full">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>{% block title %}LaudAI{% endblock %}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}laudos.ai{% endblock %}</title>
+    <meta name="description" content="Sistema avançado de laudos médicos com inteligência artificial">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 
-  <!-- Example Tailwind via CDN -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Stylesheets -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2196F3',
+                        secondary: '#1565C0',
+                        text: '#333333',
+                        background: '#F5F5F5'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Additional styling if needed -->
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #0f172a; /* A deeper dark for the background */
-      color: #f1f5f9; /* Slightly off-white for text */
-      min-height: 100vh;
-    }
-    a {
-      color: #93c5fd; /* Light-blue links */
-      transition: color 0.2s;
-    }
-    a:hover {
-      color: #60a5fa; /* Darker hover */
-    }
-    .navbar {
-      background-color: #1e293b; /* Darker nav bar */
-    }
-    .navbar a {
-      color: #f1f5f9;
-      text-decoration: none;
-      margin-right: 1rem;
-    }
-    .navbar a:hover {
-      text-decoration: underline;
-    }
-    /* You can tweak the card background slightly lighter than #0f172a */
-    .card {
-      background-color: #1e293b;
-      border-radius: 0.5rem;
-      padding: 1rem;
-    }
-    /* Generic button classes (Tailwind + custom) */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 500;
-      border-radius: 0.375rem;
-      padding: 0.5rem 1rem;
-      transition: background-color 0.2s, transform 0.2s;
-      cursor: pointer;
-    }
-    .btn:hover {
-      transform: translateY(-1px);
-    }
-    .btn-primary {
-      background-color: #3b82f6; /* Blue-500 */
-      color: #fff;
-    }
-    .btn-primary:hover {
-      background-color: #2563eb; /* Blue-600 */
-    }
-    .btn-secondary {
-      background-color: #10b981; /* Emerald-500 */
-      color: #fff;
-    }
-    .btn-secondary:hover {
-      background-color: #059669; /* Emerald-600 */
-    }
-    .btn-danger {
-      background-color: #ef4444; /* Red-500 */
-      color: #fff;
-    }
-    .btn-danger:hover {
-      background-color: #dc2626; /* Red-600 */
-    }
-  </style>
+    <style>
+        /* Custom Styles */
+        :root {
+            --primary-gradient: linear-gradient(145deg, #2196F3 0%, #1565C0 100%);
+            --hover-gradient: linear-gradient(145deg, #1E88E5 0%, #1565C0 100%);
+        }
+
+        .sidebar {
+            background: var(--primary-gradient);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-item {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 0;
+            background: white;
+            border-radius: 2px;
+            transition: height 0.3s ease;
+        }
+
+        .nav-item:hover::before {
+            height: 70%;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .content-area {
+            background-color: #F5F5F5;
+        }
+
+        .dark .content-area {
+            background-color: #212121;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #E0E0E0;
+        }
+
+        .dark ::-webkit-scrollbar-track {
+            background: #303030;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #90A4AE;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #7890A2;
+        }
+
+        /* Loading Animation */
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            @apply invisible absolute;
+        }
+
+        .has-tooltip:hover .tooltip {
+            @apply visible z-50;
+        }
+    </style>
+    {% block head %}{% endblock %}
 </head>
-<body class="flex flex-col min-h-screen">
-  <!-- Navbar -->
-  <nav class="navbar w-full py-3 mb-4">
-    <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
-      <div class="text-lg font-semibold">
-        <a href="{{ url_for('index') }}">LaudAI</a>
-      </div>
-      <div>
-        {% if session.get('user_id') %}
-          <a href="{{ url_for('profile') }}">Perfil</a>
-          <a href="{{ url_for('logout') }}">Sair</a>
-        {% else %}
-          <a href="{{ url_for('login') }}">Entrar</a>
-        {% endif %}
-      </div>
+<body class="bg-gray-50 dark:bg-gray-900 font-sans" x-data="{ 
+    darkMode: localStorage.getItem('darkMode') === 'true',
+    sidebarOpen: localStorage.getItem('sidebarOpen') === 'true',
+    showNotifications: false,
+    unreadNotifications: 0,
+    loading: false
+}" x-init="{
+    if (darkMode) document.documentElement.classList.add('dark');
+    $watch('darkMode', val => {
+        localStorage.setItem('darkMode', val);
+        if (val) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    });
+    $watch('sidebarOpen', val => localStorage.setItem('sidebarOpen', val));
+    
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (!localStorage.getItem('darkMode')) {
+            darkMode = e.matches;
+        }
+    });
+}">
+    <!-- Loading Overlay -->
+    <div x-show="loading" 
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
+         style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-xl">
+            <div class="loading-pulse">
+                <svg class="w-16 h-16 text-primary animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-4 text-gray-600 dark:text-gray-300">Processando...</p>
+            </div>
+        </div>
     </div>
-  </nav>
 
-  <!-- Main Content -->
-  <main class="flex-grow max-w-7xl mx-auto px-4">
-    {% block content %}{% endblock %}
-  </main>
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out" 
+               :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}">
+            <div class="flex flex-col h-full sidebar text-white">
+                <!-- Logo -->
+                <div class="flex items-center justify-between p-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                            <span class="text-primary text-xl font-bold">L</span>
+                        </div>
+                        <span class="text-xl font-bold text-white">laudos.ai</span>
+                    </div>
+                    <button @click="sidebarOpen = false" class="md:hidden">
+                        <i class="fas fa-times text-white"></i>
+                    </button>
+                </div>
 
-  <!-- Footer -->
-  <footer class="bg-zinc-800 mt-8 py-4">
-    <div class="max-w-7xl mx-auto px-4 text-sm text-zinc-400 text-center">
-      © {{ get_year() }} LaudAI. Todos os direitos reservados.
+                <!-- Navigation -->
+                <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                    <a href="{{ url_for('index') }}" 
+                       class="nav-item flex items-center px-4 py-3 text-white rounded-lg group">
+                        <i class="fas fa-chart-line text-white w-6"></i>
+                        <span class="ml-3">Dashboard</span>
+                    </a>
+
+                    <a href="{{ url_for('generate_report') }}"
+                       class="nav-item flex items-center px-4 py-3 text-white rounded-lg group">
+                        <i class="fas fa-plus-circle text-white w-6"></i>
+                        <span class="ml-3">Novo Laudo</span>
+                        <span class="ml-auto bg-white bg-opacity-20 px-2 py-1 rounded-full text-xs text-primary">
+                            Novo
+                        </span>
+                    </a>
+
+                    <a href="{{ url_for('meus_laudos') }}"
+                       class="nav-item flex items-center px-4 py-3 text-white rounded-lg group">
+                        <i class="fas fa-folder-open text-white w-6"></i>
+                        <span class="ml-3">Meus Laudos</span>
+                    </a>
+
+                    <a href="{{ url_for('templates') }}"
+                       class="nav-item flex items-center px-4 py-3 text-white rounded-lg group">
+                        <i class="fas fa-layer-group text-white w-6"></i>
+                        <span class="ml-3">Templates</span>
+                    </a>
+
+                    <div class="pt-4 mt-4 border-t border-white border-opacity-10">
+                        <h3 class="px-4 text-xs font-semibold text-white text-opacity-50 uppercase tracking-wider">
+                            Configurações
+                        </h3>
+                        
+                        <a href="{{ url_for('profile') }}"
+                           class="nav-item flex items-center px-4 py-3 mt-2 text-white rounded-lg group">
+                            <i class="fas fa-user text-white w-6"></i>
+                            <span class="ml-3">Meu Perfil</span>
+                        </a>
+
+                        <div class="nav-item flex items-center px-4 py-3 mt-2 text-white rounded-lg cursor-pointer"
+                             @click="darkMode = !darkMode">
+                            <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+                            <span class="ml-3" x-text="darkMode ? 'Modo Claro' : 'Modo Escuro'"></span>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- User Section -->
+                <div class="p-4 border-t border-white border-opacity-10">
+                    <div class="flex items-center">
+                        <img src="{{ user_picture }}" alt="Profile" 
+                             class="w-10 h-10 rounded-full border-2 border-white">
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-white">{{ session.get('user_name', '').split()[0] }}</p>
+                            <p class="text-xs text-white text-opacity-70">{{ session.get('user_email') }}</p>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('logout') }}" 
+                       class="mt-4 flex items-center w-full px-4 py-2 text-sm text-white text-opacity-70 hover:text-opacity-100 rounded-lg hover:bg-white hover:bg-opacity-10 transition-colors duration-200">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span class="ml-3">Sair</span>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 transition-all duration-300" 
+              :class="{'ml-64': sidebarOpen, 'ml-0': !sidebarOpen}">
+            <!-- Top Bar -->
+            <div class="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+                    <button @click="sidebarOpen = !sidebarOpen" class="text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    <div class="flex items-center space-x-4">
+                        <!-- Notifications -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" 
+                                    class="p-2 text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 relative">
+                                <i class="fas fa-bell"></i>
+                                <span x-show="unreadNotifications > 0"
+                                      class="absolute top-0 right-0 block h-4 w-4 rounded-full bg-red-500 text-xs text-white text-center">
+                                    {{ unreadNotifications }}
+                                </span>
+                            </button>
+
+                            <div x-show="open" 
+                                 @click.away="open = false"
+                                 class="absolute right-0 mt-2 w-80 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700">
+                                <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Notificações</h3>
+                                </div>
+                                <div class="max-h-96 overflow-y-auto">
+                                    <!-- Placeholder for notifications -->
+                                    <div class="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">
+                                        Nenhuma notificação no momento
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Help -->
+                        <button class="p-2 text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300">
+                            <i class="fas fa-question-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Content -->
+            <div class="p-4 sm:p-6 lg:p-8 bg-background dark:bg-gray-800 min-h-screen">
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="fixed top-4 right-4 z-50 space-y-4">
+                            {% for category, message in messages %}
+                                <div x-data="{ show: true }" 
+                                     x-show="show" 
+                                     class="max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden">
+                                    <div class="p-4">
+                                        <div class="flex items-start">
+                                            <div class="flex-shrink-0">
+                                                {% if category == 'success' %}
+                                                    <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                                                {% elif category == 'error' %}
+                                                    <i class="fas fa-exclamation-circle text-red-500 text-xl"></i>
+                                                {% else %}
+                                                    <i class="fas fa-info-circle text-blue-500 text-xl"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="ml-3 w-0 flex-1 pt-0.5">
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {{ message }}
+                                                </p>
+                                            </div>
+                                            <div class="ml-4 flex-shrink-0 flex">
+                                                <button @click="show = false" class="rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+                                                    <span class="sr-only">Fechar</span>
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Breadcrumb -->
+                <div class="mb-6">
+                    <nav class="flex" aria-label="Breadcrumb">
+                        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                            <li class="inline-flex items-center">
+                                <a href="{{ url_for('index') }}" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-primary dark:text-gray-400 dark:hover:text-white">
+                                    <i class="fas fa-home mr-2"></i>
+                                    Home
+                                </a>
+                            </li>
+                            {% block breadcrumb %}{% endblock %}
+                        </ol>
+                    </nav>
+                </div>
+
+                {% block content %}{% endblock %}
+            </div>
+
+            <!-- Footer -->
+            <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                    <div class="flex flex-col md:flex-row justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <img src="{{ url_for('static', filename='logo.png') }}" alt="laudos.ai" class="h-8">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                &copy; {{ get_year() }} laudos.ai. Todos os direitos reservados.
+                            </p>
+                        </div>
+                        <div class="flex items-center mt-4 md:mt-0 space-x-6">
+                            <a href="{{ url_for('privacy') }}" class="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+                                Privacidade
+                            </a>
+                            <a href="{{ url_for('services') }}" class="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+                                Termos
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </main>
     </div>
-  </footer>
 
-  {% block extra_scripts %}{% endblock %}
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        // Theme initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if theme is set in localStorage
+            const theme = localStorage.getItem('darkMode');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            // Set initial theme
+            if (theme === 'true' || (theme === null && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Global loading state handler
+        window.addEventListener('load', () => {
+            Alpine.store('loading', false);
+        });
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('loading', true);
+        });
+
+        // Form submission handler
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', () => {
+                Alpine.store('loading', true);
+            });
+        });
+
+        // Dynamic sidebar width adjustment
+        function adjustMainContent() {
+            const sidebar = document.querySelector('aside');
+            const main = document.querySelector('main');
+            if (window.innerWidth >= 768) {
+                main.style.marginLeft = sidebar.offsetWidth + 'px';
+            } else {
+                main.style.marginLeft = '0';
+            }
+        }
+
+        window.addEventListener('resize', adjustMainContent);
+        adjustMainContent();
+
+        // Custom error handler
+        window.addEventListener('error', function(e) {
+            console.error('Error:', e.error);
+            // Show error notification
+            Alpine.store('notifications').add({
+                type: 'error',
+                message: 'Ocorreu um erro. Por favor, tente novamente.',
+                duration: 5000
+            });
+        });
+
+        // Initialize tooltips
+        document.querySelectorAll('[data-tooltip]').forEach(element => {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'tooltip absolute z-50 px-2 py-1 text-sm text-white bg-gray-900 rounded';
+            tooltip.textContent = element.dataset.tooltip;
+            
+            element.addEventListener('mouseenter', () => {
+                document.body.appendChild(tooltip);
+                const rect = element.getBoundingClientRect();
+                tooltip.style.top = rect.bottom + 5 + 'px';
+                tooltip.style.left = rect.left + (rect.width - tooltip.offsetWidth) / 2 + 'px';
+            });
+
+            element.addEventListener('mouseleave', () => {
+                tooltip.remove();
+            });
+        });
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>
