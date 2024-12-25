@@ -155,6 +155,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<!-- (We already have references to the same JS logic in the snippet below) -->
 <script>
     function resultPage() {
         return {
@@ -236,11 +237,10 @@
                         method: "POST",
                         headers: {
                             'Content-Type': 'application/json',
+                            // Include CSRF token
                             'X-CSRFToken': '{{ csrf_token() }}'
                         },
-                        body: JSON.stringify({
-                            laudo: this.editorContent
-                        })
+                        body: JSON.stringify({ laudo: this.editorContent })
                     });
 
                     const data = await response.json();
@@ -268,11 +268,10 @@
                         method: "POST",
                         headers: {
                             'Content-Type': 'application/json',
+                            // Include CSRF token
                             'X-CSRFToken': '{{ csrf_token() }}'
                         },
-                        body: JSON.stringify({
-                            laudo: this.editorContent
-                        })
+                        body: JSON.stringify({ laudo: this.editorContent })
                     });
 
                     if (response.ok) {
@@ -318,9 +317,10 @@
                 }
             }
         }
-    </script>
-    <!-- Include marked.js for Markdown parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Include FontAwesome for icons -->
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    }
+</script>
+<!-- Include marked.js for Markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- Include FontAwesome for icons -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 {% endblock %}
