@@ -2,71 +2,100 @@
 {% block title %}laudos.ai - Resultado{% endblock %}
 
 {% block content %}
-<!-- DEBUG: Show raw laudo from Flask (in case the regex kills everything) -->
-<div class="p-2 mb-4 bg-red-100 text-red-800">
-  <strong>DEBUG RAW LAUDO:</strong> {{ laudo }}
-</div>
-
-<div x-data="resultPage()" class="space-y-6" x-init="init()">
+<div x-data="resultPage()" x-init="init()" class="space-y-6">
+  <!-- Page Header -->
   <header class="flex flex-col space-y-2">
-    <h1 class="text-3xl font-extrabold text-primary">
-      Resultado do Laudo
-    </h1>
+    <h1 class="text-3xl font-extrabold text-primary">Resultado do Laudo</h1>
     <p class="text-sm text-gray-400">
-      Visualize e gerencie o resultado do seu laudo de forma simples e segura.
+      Visualize o resultado do seu laudo gerado. 
     </p>
   </header>
 
-  <div class="bg-white rounded-lg shadow p-6 space-y-4">
+  <!-- Card Container -->
+  <div class="bg-white dark:bg-surface rounded-lg shadow p-6 space-y-4">
+    <!-- Tabs -->
     <div class="flex space-x-4 border-b pb-2">
-      <button 
+      <button
         @click="activeTab = 'laudo'"
         :class="activeTab === 'laudo' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-600'"
         class="pb-1 font-medium"
-      >Laudo Gerado
+      >
+        Laudo Gerado
       </button>
-      <button 
+      <button
         @click="activeTab = 'editor'"
         :class="activeTab === 'editor' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-600'"
         class="pb-1 font-medium"
-      >Editor de Laudo
+      >
+        Editor de Laudo
       </button>
     </div>
 
-    <!-- TAB: Laudo -->
+    <!-- Laudo Gerado Tab -->
     <div x-show="activeTab === 'laudo'" class="space-y-4">
-      <div class="bg-gray-100 p-4 rounded whitespace-pre-wrap text-sm text-gray-800 max-h-64 overflow-y-auto"
-           id="laudoView">
-        <span x-text="cleanedLaudo"></span>
+      <div class="bg-gray-100 p-3 rounded text-sm text-gray-800 max-h-96 overflow-y-auto whitespace-pre-wrap">
+        <!-- Each line displayed separately -->
+        <template x-for="(line, i) in splittedLines" :key="i">
+          <div class="mb-1" x-text="line"></div>
+        </template>
       </div>
       <div class="flex justify-end space-x-3">
-        <button @click="copyLaudo()" class="bg-primary text-white px-3 py-1 rounded">Copiar</button>
-        <button @click="activeTab='editor'" class="bg-secondary text-white px-3 py-1 rounded">Editar</button>
+        <button @click="copyLaudo()" class="bg-primary text-white px-4 py-2 rounded">Copiar</button>
+        <button @click="goToEditor()" class="bg-secondary text-white px-4 py-2 rounded">Editar</button>
       </div>
     </div>
 
-    <!-- TAB: Editor -->
+    <!-- Editor Tab -->
     <div x-show="activeTab === 'editor'" class="space-y-4">
       <div class="bg-gray-50 p-3 rounded">
-        <p>Edite abaixo:</p>
+        Edite o texto do laudo conforme desejar.
       </div>
-      <textarea x-model="editorContent"
-                @input="updateLength()"
-                class="w-full h-40 p-2 border border-gray-300"></textarea>
-      <div class="text-sm text-gray-500">
-        Caracteres: <span x-text="editorLength"></span>
+      <div class="relative">
+        <div class="absolute right-2 top-2 text-xs text-gray-400">
+          Caracteres: <span x-text="editorLength"></span>
+        </div>
+        <textarea
+          x-model="editorContent"
+          @input="updateLength()"
+          class="w-full h-56 p-3 bg-gray-100 text-sm text-gray-800 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-pre-wrap"
+        ></textarea>
       </div>
       <div class="flex justify-end space-x-3">
-        <button @click="copyEditor()" class="bg-primary text-white px-3 py-1 rounded">Copiar Editor</button>
-        <button @click="saveLaudo()" class="bg-green-600 text-white px-3 py-1 rounded">Salvar</button>
+        <button @click="copyEditor()" class="bg-primary text-white px-4 py-2 rounded">Copiar</button>
+        <button @click="saveLaudo()" class="bg-green-600 text-white px-4 py-2 rounded">Salvar</button>
       </div>
     </div>
   </div>
 
-  <!-- Notification -->
-  <div x-show="showNotification" class="fixed bottom-4 right-4 bg-green-500 text-white rounded px-4 py-2 shadow"
-       x-transition
-       style="display:none;">
+  <!-- Loading Spinner (conditional) -->
+  <div
+    x-show="isLoading"
+    class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
+    style="display: none;"
+  >
+    <div class="bg-white p-4 rounded shadow flex flex-col items-center space-y-2">
+      <svg
+        class="w-8 h-8 animate-spin text-primary"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373... etc">
+        </path>
+      </svg>
+      <p class="text-sm text-gray-600">Processando...</p>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div
+    x-show="showNotification"
+    x-transition
+    class="fixed bottom-4 right-4 bg-green-500 text-white rounded px-4 py-3 shadow-lg z-50"
+    style="display: none;"
+  >
     <span x-text="notificationMessage"></span>
   </div>
 </div>
@@ -74,64 +103,89 @@
 
 {% block extra_scripts %}
 <script>
-function resultPage() {
-  return {
-    activeTab: 'laudo',
-    showNotification: false,
-    notificationMessage: '',
-    rawLaudo: `{{ laudo|escape|replace("\n","\\n") }}`,
-    cleanedLaudo: '',
-    editorContent: '',
-    editorLength: 0,
+  function resultPage() {
+    return {
+      activeTab: 'laudo',
+      isLoading: false,
+      showNotification: false,
+      notificationMessage: '',
+      rawLaudo: `{{ laudo | escape | replace("\n","\\n") }}`,
+      cleanedLaudo: '',
+      splittedLines: [],
+      editorContent: '',
+      editorLength: 0,
 
-    init() {
-      // 1) Remove entire blocks <tag>...</tag>
-      const step1 = this.rawLaudo.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, '');
-      // 2) Remove leftover single tags
-      const step2 = step1.replace(/<[^>]*>/g, '');
-      this.cleanedLaudo = step2.trim();
+      init() {
+        // 1) Remove blocks <tag>...</tag>
+        let step1 = this.rawLaudo.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, '');
+        // 2) Remove leftover single tags <...>
+        let step2 = step1.replace(/<[^>]*>/g, '');
 
-      this.editorContent = this.cleanedLaudo;
-      this.updateLength();
-    },
-    updateLength() {
-      this.editorLength = this.editorContent.length;
-    },
-    copyLaudo() {
-      navigator.clipboard.writeText(this.cleanedLaudo)
-        .then(() => this.fireNotice('Laudo copiado!'))
-        .catch(() => this.fireNotice('Erro ao copiar laudo.'));
-    },
-    copyEditor() {
-      navigator.clipboard.writeText(this.editorContent)
-        .then(() => this.fireNotice('Copiado do editor!'))
-        .catch(() => this.fireNotice('Erro ao copiar do editor.'));
-    },
-    saveLaudo() {
-      fetch('{{ url_for("save_laudo") }}', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ laudo: this.editorContent })
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) this.fireNotice(data.error);
-        else this.fireNotice(data.message || 'Laudo salvo!');
-      })
-      .catch(err => {
-        console.error(err);
-        this.fireNotice('Falha de rede ao salvar.');
-      });
-    },
-    fireNotice(msg) {
-      this.notificationMessage = msg;
-      this.showNotification = true;
-      setTimeout(() => this.showNotification = false, 2500);
+        // The final text with no tags:
+        this.cleanedLaudo = step2.trim();
+
+        // Split lines by \n for structured display. 
+        // If your laudo uses '.' or other punctuation, adjust to suit.
+        this.splittedLines = this.cleanedLaudo.split('\\n').filter(l => l.trim() !== '');
+
+        // Editor starts with the entire cleaned text
+        this.editorContent = this.cleanedLaudo;
+        this.updateLength();
+      },
+
+      updateLength() {
+        this.editorLength = this.editorContent.length;
+      },
+
+      copyLaudo() {
+        // Copy the entire cleaned text, not splitted lines
+        navigator.clipboard.writeText(this.cleanedLaudo)
+          .then(() => this.showAlert("Laudo copiado!"))
+          .catch(() => this.showAlert("Erro ao copiar."));
+      },
+
+      goToEditor() {
+        this.activeTab = 'editor';
+      },
+
+      copyEditor() {
+        navigator.clipboard.writeText(this.editorContent)
+          .then(() => this.showAlert("Texto copiado do editor!"))
+          .catch(() => this.showAlert("Erro ao copiar do editor."));
+      },
+
+      saveLaudo() {
+        this.isLoading = true;
+        fetch('{{ url_for("save_laudo") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+          },
+          body: JSON.stringify({ laudo: this.editorContent })
+        })
+        .then(async res => {
+          this.isLoading = false;
+          const data = await res.json();
+          if (!res.ok) {
+            this.showAlert(data.error || "Erro ao salvar.");
+            return;
+          }
+          this.showAlert(data.message || "Laudo salvo com sucesso!");
+        })
+        .catch(err => {
+          console.error(err);
+          this.isLoading = false;
+          this.showAlert("Falha na requisição.");
+        });
+      },
+
+      showAlert(msg) {
+        this.notificationMessage = msg;
+        this.showNotification = true;
+        setTimeout(() => { this.showNotification = false; }, 3000);
+      }
     }
   }
-}
 </script>
 {% endblock %}
