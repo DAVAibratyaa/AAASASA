@@ -3,19 +3,20 @@ import requests
 import logging
 from datetime import datetime
 from flask import (
-    Flask, request, render_template, redirect, url_for, flash, session, jsonify
+    Flask, request, render_template, redirect, url_for, flash, session, jsonify,
+    send_file
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade
 from oauthlib.oauth2 import WebApplicationClient
+from functools import wraps
 
 # If you actually use these:
 from anthropic import Anthropic
 from openai import AsyncOpenAI
 import asyncio
-from functools import wraps
 
-# ---- CRITICAL: Import CSRFProtect from Flask-WTF
+# For CSRF
 from flask_wtf.csrf import CSRFProtect
 
 # --------------------------------------------------------------------------------
@@ -34,7 +35,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_POOL_SIZE"] = 20
 app.config["SQLALCHEMY_MAX_OVERFLOW"] = 40
 
-# ---- CRITICAL: Initialize CSRFProtect
+# Enable CSRF protection
 csrf = CSRFProtect(app)
 
 db = SQLAlchemy(app)
@@ -60,15 +61,6 @@ openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # --------------------------------------------------------------------------------
 # Database Models
 # --------------------------------------------------------------------------------
-class Report(db.Model):
-    """Stores reports generated for each user."""
-    id = db.Column(db.Integer, primary_key=True)
-    exame = db.Column(db.Text, nullable=True)
-    achados = db.Column(db.Text, nullable=True)
-    laudo = db.Column(db.Text, nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
-
 class User(db.Model):
     """Represents the user who logs in via Google OAuth."""
     id = db.Column(db.Integer, primary_key=True)
@@ -78,6 +70,15 @@ class User(db.Model):
     picture = db.Column(db.String(500), nullable=False)
     total_reports = db.Column(db.Integer, default=0)
     total_time_saved = db.Column(db.Float, default=0.0)
+
+class Report(db.Model):
+    """Stores reports generated for each user."""
+    id = db.Column(db.Integer, primary_key=True)
+    exame = db.Column(db.Text, nullable=True)
+    achados = db.Column(db.Text, nullable=True)
+    laudo = db.Column(db.Text, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
 
 class Template(db.Model):
     """Stores user-defined templates for reuse."""
@@ -463,9 +464,9 @@ def search_laudos():
 
     results = Report.query.filter(
         Report.user_id == user.id,
-        (Report.exame.ilike(f'%{query}%') |
-         Report.achados.ilike(f'%{query}%') |
-         Report.laudo.ilike(f'%{query}%'))
+        (Report.exame.ilike(f'%{query}%')
+         | Report.achados.ilike(f'%{query}%')
+         | Report.laudo.ilike(f'%{query}%'))
     ).all()
 
     return jsonify([{
@@ -512,6 +513,46 @@ def save_laudo():
         db.session.rollback()
         logger.error(f"Erro ao salvar laudo: {str(e)}")
         return jsonify({"error": "Falha ao salvar o laudo."}), 500
+
+# --------------------------------------------------------------------------------
+# PDF EXPORT ROUTE
+# --------------------------------------------------------------------------------
+@app.route('/export_pdf', methods=["POST"], endpoint="export_pdf")
+@login_required
+def export_pdf():
+    """
+    Takes a 'laudo' from JSON and returns a generated PDF.
+    Ensure 'wkhtmltopdf' is installed on your system and 'pdfkit' in your Python environment.
+    """
+    data = request.get_json()
+    laudo = data.get('laudo', 'Laudo vazio')
+
+    try:
+        import pdfkit
+        from io import BytesIO
+
+        # Convert laudo to basic HTML
+        pdf_content = f"""
+        <html>
+          <head><meta charset="UTF-8"></head>
+          <body><pre>{laudo}</pre></body>
+        </html>
+        """
+
+        # Generate PDF in-memory
+        pdf_data = pdfkit.from_string(pdf_content, False)
+        pdf_file = BytesIO(pdf_data)
+        pdf_file.seek(0)
+
+        return send_file(
+            pdf_file,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name='laudo.pdf'
+        )
+    except Exception as e:
+        logger.error(f"Erro ao exportar PDF: {str(e)}")
+        return jsonify({"error": "Falha ao exportar o PDF"}), 500
 
 # --------------------------------------------------------------------------------
 # Error Handlers
