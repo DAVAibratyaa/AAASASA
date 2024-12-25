@@ -1,342 +1,207 @@
 {% extends "base.html" %}
-{% block title %}LaudAI - Resultado do Laudo{% endblock %}
+{% block title %}laudos.ai - Resultado{% endblock %}
 {% block content %}
-<div x-data="resultPage()" class="max-w-7xl mx-auto p-6 sm:p-8 md:p-10 lg:p-12 xl:p-14 space-y-8">
-    <!-- Header -->
-    <header class="space-y-4 text-center md:text-left">
-        <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary">
-            Resultado do Laudo
-        </h1>
-        <p class="text-lg sm:text-xl text-muted-foreground">Visualize e gerencie seus laudos médicos com eficiência.</p>
-    </header>
 
-    <!-- Laudo Gerado -->
-    <div class="rounded-lg bg-card text-card-foreground shadow-md">
-        <div class="p-4 sm:p-6">
-            <!-- Tabs -->
-            <div class="inline-flex space-x-2 rounded-md bg-secondary bg-opacity-20 p-1">
-                <button @click="activeTab = 'laudo'"
-                        :class="{ 'bg-white text-primary shadow-sm dark:bg-zinc-800 dark:text-white': activeTab === 'laudo' }"
-                        class="flex items-center space-x-2 px-3 py-1.5 text-sm sm:text-base font-medium rounded-md transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary">
-                    <i class="fas fa-file-alt"></i>
-                    <span>Laudo Gerado</span>
-                </button>
-                <button @click="activeTab = 'editor'"
-                        :class="{ 'bg-white text-primary shadow-sm dark:bg-zinc-800 dark:text-white': activeTab === 'editor' }"
-                        class="flex items-center space-x-2 px-3 py-1.5 text-sm sm:text-base font-medium rounded-md transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary">
-                    <i class="fas fa-edit"></i>
-                    <span>Editor de Laudo</span>
-                </button>
-            </div>
-        </div>
+<div x-data="resultPage()" class="space-y-6">
+  <!-- Header / Title -->
+  <header class="flex flex-col space-y-2">
+    <h1 class="text-3xl font-extrabold text-primary">
+      Resultado do Laudo
+    </h1>
+    <p class="text-sm text-gray-400">
+      Visualize e gerencie o resultado do seu laudo de forma simples e segura.
+    </p>
+  </header>
 
-        <!-- Conteúdo das Abas -->
-        <div class="p-4 sm:p-6 pt-0">
-            <!-- Laudo Gerado -->
-            <div x-show="activeTab === 'laudo'" x-transition class="space-y-4 sm:space-y-6">
-                <!-- Alert -->
-                <div class="flex items-center p-4 text-sm sm:text-base text-primary bg-primary bg-opacity-10 rounded-lg" role="alert">
-                    <i class="fas fa-info-circle mr-3"></i>
-                    <div>Aqui está o laudo gerado para o seu exame.</div>
-                </div>
-                <!-- Laudo Content -->
-                <div class="space-y-4 sm:space-y-6">
-                    <div class="flex flex-col space-y-4">
-                        <h2 class="text-xl sm:text-2xl font-semibold text-primary">Laudo Gerado:</h2>
-                        <!-- 
-                            We use `{{ laudo|escape }}` so any <tags> in laudo appear as plain text.
-                            We apply 'whitespace-pre-wrap' so line breaks are preserved. 
-                        -->
-                        <div id="laudoContent" 
-                             class="bg-muted p-4 rounded-md whitespace-pre-wrap max-h-96 overflow-y-auto text-sm sm:text-base">
-                            {{ laudo|escape }}
-                        </div>
-                    </div>
-                    <!-- Action Buttons -->
-                    <div class="flex space-x-2 justify-center">
-                        <button @click="copyToClipboard('laudoContent')" :disabled="isLoading"
-                                class="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-md shadow hover:bg-primary/90 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary">
-                            <i class="fas fa-copy"></i>
-                            <span>Copiar Laudo</span>
-                        </button>
-                        <button @click="transferToEditor()" :disabled="isLoading"
-                                class="flex items-center space-x-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md shadow hover:bg-secondary/90 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-secondary">
-                            <i class="fas fa-edit"></i>
-                            <span>Editar no Editor</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Editor de Laudo -->
-            <div x-show="activeTab === 'editor'" x-transition class="space-y-4 sm:space-y-6">
-                <!-- Alert -->
-                <div class="flex items-center p-4 text-sm sm:text-base text-primary bg-primary bg-opacity-10 rounded-lg" role="alert">
-                    <i class="fas fa-lightbulb mr-3"></i>
-                    <div>Edite o laudo conforme necessário.</div>
-                </div>
-                <!-- Editor Content -->
-                <div class="space-y-4 sm:space-y-6">
-                    <!-- Toolbar -->
-                    <div class="flex flex-wrap gap-2 mb-2">
-                        <button @click="formatText('bold')" class="px-3 py-1 bg-secondary text-secondary-foreground rounded-md shadow hover:bg-secondary/90 transition focus:outline-none focus:ring-2 focus:ring-secondary" aria-label="Negrito">
-                            <i class="fas fa-bold"></i>
-                        </button>
-                        <button @click="formatText('italic')" class="px-3 py-1 bg-secondary text-secondary-foreground rounded-md shadow hover:bg-secondary/90 transition focus:outline-none focus:ring-2 focus:ring-secondary" aria-label="Itálico">
-                            <i class="fas fa-italic"></i>
-                        </button>
-                        <button @click="formatText('underline')" class="px-3 py-1 bg-secondary text-secondary-foreground rounded-md shadow hover:bg-secondary/90 transition focus:outline-none focus:ring-2 focus:ring-secondary" aria-label="Sublinhado">
-                            <i class="fas fa-underline"></i>
-                        </button>
-                        <button @click="formatText('insertUnorderedList')" class="px-3 py-1 bg-secondary text-secondary-foreground rounded-md shadow hover:bg-secondary/90 transition focus:outline-none focus:ring-2 focus:ring-secondary" aria-label="Lista Não Ordenada">
-                            <i class="fas fa-list-ul"></i>
-                        </button>
-                        <button @click="formatText('insertOrderedList')" class="px-3 py-1 bg-secondary text-secondary-foreground rounded-md shadow hover:bg-secondary/90 transition focus:outline-none focus:ring-2 focus:ring-secondary" aria-label="Lista Ordenada">
-                            <i class="fas fa-list-ol"></i>
-                        </button>
-                        <button @click="toggleMarkdownPreview()" class="px-3 py-1 bg-secondary text-secondary-foreground rounded-md shadow hover:bg-secondary/90 transition focus:outline-none focus:ring-2 focus:ring-secondary" aria-label="Alternar Pré-Visualização Markdown">
-                            <i :class="showMarkdownPreview ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                        </button>
-                        <button @click="toggleTheme()" class="px-3 py-1 bg-secondary text-secondary-foreground rounded-md shadow hover:bg-secondary/90 transition focus:outline-none focus:ring-2 focus:ring-secondary" aria-label="Alternar Tema">
-                            <i :class="isDarkMode ? 'fas fa-sun' : 'fas fa-moon'"></i>
-                        </button>
-                    </div>
-                    <!-- Editor and Preview -->
-                    <div class="relative">
-                        <div class="absolute top-2 right-2">
-                            <span class="text-xs text-gray-500" x-text="'Caracteres: ' + characterCount"></span>
-                        </div>
-                        <div>
-                            <div x-show="!showMarkdownPreview" x-transition>
-                                <div id="editor" contenteditable="true" @input="updateEditorContent"
-                                     class="editor-content bg-white dark:bg-zinc-800 p-4 rounded-md overflow-y-auto text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary border border-gray-300 dark:border-zinc-700">
-                                </div>
-                            </div>
-                            <div x-show="showMarkdownPreview" x-transition>
-                                <div id="preview" class="editor-content bg-white dark:bg-zinc-800 p-4 rounded-md overflow-y-auto text-sm sm:text-base border border-gray-300 dark:border-zinc-700" x-html="marked(editorContent)"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Action Buttons -->
-                    <div class="flex space-x-2 justify-center">
-                        <button @click="copyToClipboard('editorContent')" :disabled="isLoading"
-                                class="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-md shadow hover:bg-primary/90 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary">
-                            <i class="fas fa-copy"></i>
-                            <span>Copiar do Editor</span>
-                        </button>
-                        <button @click="saveLaudo()" :disabled="isLoading"
-                                class="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md shadow hover:bg-green-700 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-600">
-                            <i class="fas fa-save"></i>
-                            <span>Salvar Laudo</span>
-                        </button>
-                        <button @click="exportPDF()" :disabled="isLoading"
-                                class="flex items-center space-x-2 px-4 py-2 bg-yellow-500 text-white rounded-md shadow hover:bg-yellow-600 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-500">
-                            <i class="fas fa-file-pdf"></i>
-                            <span>Exportar PDF</span>
-                        </button>
-                        <button @click="resetEditor()" :disabled="isLoading"
-                                class="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-600">
-                            <i class="fas fa-eraser"></i>
-                            <span>Resetar Editor</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <!-- Card Container -->
+  <div class="bg-white dark:bg-surface rounded-lg shadow p-6 space-y-4">
+    
+    <!-- Tabs (Laudo x Editor) -->
+    <div class="flex space-x-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+      <button @click="activeTab = 'laudo'"
+              :class="activeTab === 'laudo' 
+                ? 'border-b-2 border-blue-500 text-blue-500' 
+                : 'text-gray-600 dark:text-gray-300'"
+              class="pb-1 font-medium transition-colors">
+        <i class="fas fa-file-alt mr-1"></i> Laudo Gerado
+      </button>
+      <button @click="activeTab = 'editor'"
+              :class="activeTab === 'editor' 
+                ? 'border-b-2 border-blue-500 text-blue-500' 
+                : 'text-gray-600 dark:text-gray-300'"
+              class="pb-1 font-medium transition-colors">
+        <i class="fas fa-edit mr-1"></i> Editor de Laudo
+      </button>
     </div>
 
-    <!-- Overlay de Carregamento -->
-    <div x-show="isLoading" x-cloak class="fixed inset-0 bg-background bg-opacity-50 flex items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-primary"></div>
+    <!-- LAUDO TAB -->
+    <div x-show="activeTab === 'laudo'" x-transition class="space-y-4">
+      <!-- Notification / Info -->
+      <div class="flex items-center p-3 rounded bg-gray-50 dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200">
+        <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+        <span>Abaixo está o texto do seu laudo (sem tags internas).</span>
+      </div>
+      <!-- Stripped Laudo Content -->
+      <div class="bg-gray-100 dark:bg-gray-900 p-4 rounded whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-100 max-h-96 overflow-y-auto"
+           id="laudoView">
+        {{!-- 
+          We'll fill this with `cleanedLaudo` in Alpine's init() 
+          after removing everything inside tags.
+        --}}
+        <span x-text="cleanedLaudo"></span>
+      </div>
+      <!-- Actions -->
+      <div class="flex justify-end space-x-3">
+        <button @click="copyLaudo()"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-primary text-white hover:bg-hoverPrimary transition">
+          <i class="fas fa-copy mr-2"></i> Copiar
+        </button>
+        <button @click="goToEditor()"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-secondary text-white hover:bg-blue-600 transition">
+          <i class="fas fa-edit mr-2"></i> Editar no Editor
+        </button>
+      </div>
     </div>
 
-    <!-- Notificações -->
-    <div x-show="showNotification"
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 transform scale-90"
-         x-transition:enter-end="opacity-100 transform scale-100"
-         x-transition:leave="transition ease-in duration-300"
-         x-transition:leave-start="opacity-100 transform scale-100"
-         x-transition:leave-end="opacity-0 transform scale-90"
-         class="fixed bottom-4 right-4 z-50 p-4 rounded-md bg-green-500 text-white shadow-lg">
-        <div class="flex items-center space-x-2">
-            <i class="fas fa-check-circle"></i>
-            <span x-text="notificationMessage"></span>
+    <!-- EDITOR TAB -->
+    <div x-show="activeTab === 'editor'" x-transition class="space-y-4">
+      <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded flex items-center text-gray-700 dark:text-gray-200">
+        <i class="fas fa-lightbulb mr-2 text-yellow-400"></i>
+        <span>Edite o texto do laudo conforme desejar.</span>
+      </div>
+      <!-- Editor Container -->
+      <div class="relative">
+        <div class="absolute right-2 top-2 text-xs text-gray-400 dark:text-gray-500">
+          Caracteres: <span x-text="editorLength"></span>
         </div>
+        <textarea id="editorArea" x-model="editorContent"
+                  class="w-full h-56 p-3 bg-gray-100 dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-100 rounded border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-pre-wrap"
+                  @input="updateLength()">
+        </textarea>
+      </div>
+      <!-- Editor Actions -->
+      <div class="flex justify-end space-x-3">
+        <button @click="copyEditor()"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-primary text-white hover:bg-hoverPrimary transition">
+          <i class="fas fa-copy mr-2"></i> Copiar
+        </button>
+        <button @click="saveLaudo()"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-green-600 text-white hover:bg-green-700 transition">
+          <i class="fas fa-save mr-2"></i> Salvar
+        </button>
+      </div>
     </div>
+  </div>
+
+  <!-- Loading Spinner (conditional) -->
+  <div x-show="isLoading"
+       class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
+       style="display: none;">
+    <div class="bg-white dark:bg-gray-800 p-4 rounded shadow flex flex-col items-center space-y-2">
+      <svg class="w-8 h-8 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10"
+                stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373..."></path>
+      </svg>
+      <p class="text-sm text-gray-600 dark:text-gray-200">Processando...</p>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div x-show="showNotification"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 transform scale-90"
+       x-transition:enter-end="opacity-100 transform scale-100"
+       x-transition:leave="transition ease-in duration-300"
+       x-transition:leave-start="opacity-100 transform scale-100"
+       x-transition:leave-end="opacity-0 transform scale-90"
+       class="fixed bottom-4 right-4 bg-green-500 text-white rounded px-4 py-3 shadow-lg z-50"
+       style="display: none;">
+    <div class="flex items-center">
+      <i class="fas fa-check-circle mr-2"></i>
+      <span x-text="notificationMessage"></span>
+    </div>
+  </div>
 </div>
+
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    function resultPage() {
-        return {
-            activeTab: 'laudo',
-            isLoading: false,
-            showNotification: false,
-            notificationMessage: '',
-            showMarkdownPreview: false,
-            isDarkMode: false,
-            // Escape the laudo so any <tag> doesn't get rendered as HTML
-            editorContent: '{{ laudo | escape | replace("\n", "\\n") }}',
-            characterCount: 0,
+  function resultPage() {
+    return {
+      activeTab: 'laudo',
+      isLoading: false,
+      showNotification: false,
+      notificationMessage: '',
+      rawLaudo: `{{ laudo | escape | replace("\n","\\n") }}`, 
+      cleanedLaudo: '',
+      editorContent: '',
+      editorLength: 0,
 
-            init() {
-                this.characterCount = this.editorContent.length;
-                this.$watch('editorContent', value => {
-                    this.characterCount = value.length;
-                });
-                this.applyTheme();
-            },
+      init() {
+        // 1) Remove entire blocks <tag>...</tag> (including multiline).
+        // 2) Remove leftover <tag> if not closed or partial.
+        //   => This approach ensures ANY text inside a <tag> is gone.
+        let laudoStep1 = this.rawLaudo.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, '');
+        let laudoStep2 = laudoStep1.replace(/<[^>]*>/g, '');
 
-            copyToClipboard(elementId) {
-                let text;
-                if (elementId === 'editorContent') {
-                    // Remove any HTML that might exist
-                    text = this.editorContent.replace(/<[^>]*>?/gm, '');
-                } else {
-                    const element = document.getElementById(elementId);
-                    text = element.innerText;
-                }
-                navigator.clipboard.writeText(text).then(() => {
-                    this.notificationMessage = 'Conteúdo copiado com sucesso!';
-                    this.showNotification = true;
-                    setTimeout(() => this.showNotification = false, 3000);
-                }).catch(err => {
-                    this.notificationMessage = 'Erro ao copiar o conteúdo.';
-                    this.showNotification = true;
-                    setTimeout(() => this.showNotification = false, 3000);
-                });
-            },
+        this.cleanedLaudo = laudoStep2.trim();
+        this.editorContent = this.cleanedLaudo;
 
-            transferToEditor() {
-                // We get text from the laudoContent <div>, which is escaped, but preserve line breaks
-                const content = document.getElementById('laudoContent').textContent;
-                this.editorContent = content;
-                this.activeTab = 'editor';
-                this.notificationMessage = 'Conteúdo transferido para o editor!';
-                this.showNotification = true;
-                setTimeout(() => this.showNotification = false, 3000);
-            },
-
-            formatText(command) {
-                document.execCommand(command, false, null);
-                this.updateEditorContent();
-            },
-
-            updateEditorContent() {
-                this.editorContent = document.getElementById('editor').innerHTML;
-            },
-
-            toggleMarkdownPreview() {
-                this.showMarkdownPreview = !this.showMarkdownPreview;
-            },
-
-            toggleTheme() {
-                this.isDarkMode = !this.isDarkMode;
-                this.applyTheme();
-            },
-
-            applyTheme() {
-                if (this.isDarkMode) {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                }
-            },
-
-            async saveLaudo() {
-                this.isLoading = true;
-                try {
-                    const response = await fetch("{{ url_for('save_laudo') }}", {
-                        method: "POST",
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({
-                            laudo: this.editorContent
-                        })
-                    });
-
-                    const data = await response.json();
-                    if (response.ok) {
-                        this.notificationMessage = data.message || 'Laudo salvo com sucesso!';
-                        this.showNotification = true;
-                    } else {
-                        this.notificationMessage = data.error || 'Erro ao salvar o laudo.';
-                        this.showNotification = true;
-                    }
-                } catch (error) {
-                    console.error('Erro ao salvar o laudo:', error);
-                    this.notificationMessage = 'Erro ao salvar o laudo. Por favor, tente novamente.';
-                    this.showNotification = true;
-                } finally {
-                    this.isLoading = false;
-                    setTimeout(() => this.showNotification = false, 3000);
-                }
-            },
-
-            async exportPDF() {
-                this.isLoading = true;
-                try {
-                    const response = await fetch("{{ url_for('export_pdf') }}", {
-                        method: "POST",
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({
-                            laudo: this.editorContent
-                        })
-                    });
-
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'laudo.pdf';
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        window.URL.revokeObjectURL(url);
-                        this.notificationMessage = 'PDF exportado com sucesso!';
-                        this.showNotification = true;
-                    } else {
-                        this.notificationMessage = 'Erro ao exportar PDF.';
-                        this.showNotification = true;
-                    }
-                } catch (error) {
-                    console.error('Erro ao exportar PDF:', error);
-                    this.notificationMessage = 'Erro ao exportar PDF. Por favor, tente novamente.';
-                    this.showNotification = true;
-                } finally {
-                    this.isLoading = false;
-                    setTimeout(() => this.showNotification = false, 3000);
-                }
-            },
-
-            resetEditor() {
-                if (confirm('Tem certeza de que deseja resetar o editor? Todas as alterações não salvas serão perdidas.')) {
-                    // Revert to the original laudo content:
-                    this.editorContent = '{{ laudo | escape | replace("\n", "\\n") }}';
-                    this.updateEditorDisplay();
-                    this.notificationMessage = 'Editor resetado para o conteúdo original.';
-                    this.showNotification = true;
-                    setTimeout(() => this.showNotification = false, 3000);
-                }
-            },
-
-            updateEditorDisplay() {
-                const editor = document.getElementById('editor');
-                if (editor) {
-                    editor.innerHTML = this.editorContent;
-                }
-            }
-        }
+        // Count initial length
+        this.updateLength();
+      },
+      updateLength() {
+        this.editorLength = this.editorContent.length;
+      },
+      copyLaudo() {
+        // Copy from laudoView
+        navigator.clipboard.writeText(this.cleanedLaudo)
+          .then(() => this.showAlert('Laudo copiado!'))
+          .catch(() => this.showAlert('Erro ao copiar o laudo.'));
+      },
+      goToEditor() {
+        this.activeTab = 'editor';
+      },
+      copyEditor() {
+        navigator.clipboard.writeText(this.editorContent)
+          .then(() => this.showAlert('Texto copiado do editor!'))
+          .catch(() => this.showAlert('Erro ao copiar do editor.'));
+      },
+      saveLaudo() {
+        this.isLoading = true;
+        // Example fetch to /save_laudo
+        fetch('{{ url_for("save_laudo") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+          },
+          body: JSON.stringify({ laudo: this.editorContent })
+        })
+        .then(async (res) => {
+          this.isLoading = false;
+          const data = await res.json();
+          if (!res.ok) {
+            this.showAlert(data.error || 'Erro ao salvar o laudo.');
+            return;
+          }
+          this.showAlert(data.message || 'Laudo salvo com sucesso!');
+        })
+        .catch((err) => {
+          console.error(err);
+          this.isLoading = false;
+          this.showAlert('Falha na requisição. Tente novamente.');
+        });
+      },
+      showAlert(msg) {
+        this.notificationMessage = msg;
+        this.showNotification = true;
+        setTimeout(() => this.showNotification = false, 3000);
+      }
     }
+  }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 {% endblock %}
