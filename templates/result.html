@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}laudos.ai - Resultado{% endblock %}
-{% block content %}
 
-<div x-data="resultPage()" class="space-y-6">
+{% block content %}
+<div x-data="resultPage()" class="space-y-6" x-init="init()">
   <!-- Header / Title -->
   <header class="flex flex-col space-y-2">
     <h1 class="text-3xl font-extrabold text-primary">
@@ -18,18 +18,20 @@
     
     <!-- Tabs (Laudo x Editor) -->
     <div class="flex space-x-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-      <button @click="activeTab = 'laudo'"
-              :class="activeTab === 'laudo' 
-                ? 'border-b-2 border-blue-500 text-blue-500' 
-                : 'text-gray-600 dark:text-gray-300'"
-              class="pb-1 font-medium transition-colors">
+      <button 
+        @click="activeTab = 'laudo'"
+        :class="activeTab === 'laudo' 
+          ? 'border-b-2 border-blue-500 text-blue-500' 
+          : 'text-gray-600 dark:text-gray-300'"
+        class="pb-1 font-medium transition-colors">
         <i class="fas fa-file-alt mr-1"></i> Laudo Gerado
       </button>
-      <button @click="activeTab = 'editor'"
-              :class="activeTab === 'editor' 
-                ? 'border-b-2 border-blue-500 text-blue-500' 
-                : 'text-gray-600 dark:text-gray-300'"
-              class="pb-1 font-medium transition-colors">
+      <button 
+        @click="activeTab = 'editor'"
+        :class="activeTab === 'editor' 
+          ? 'border-b-2 border-blue-500 text-blue-500' 
+          : 'text-gray-600 dark:text-gray-300'"
+        class="pb-1 font-medium transition-colors">
         <i class="fas fa-edit mr-1"></i> Editor de Laudo
       </button>
     </div>
@@ -39,22 +41,30 @@
       <!-- Notification / Info -->
       <div class="flex items-center p-3 rounded bg-gray-50 dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200">
         <i class="fas fa-info-circle mr-2 text-blue-500"></i>
-        <span>Abaixo está o texto do seu laudo.</span>
+        <span>Abaixo está o texto do seu laudo (sem tags internas).</span>
       </div>
+
       <!-- Stripped Laudo Content -->
-      <div class="bg-gray-100 dark:bg-gray-900 p-4 rounded whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-100 max-h-96 overflow-y-auto"
-           id="laudoView">
-        <!-- We'll fill this with `cleanedLaudo` in Alpine's init(), after removing everything inside tags -->
+      <div 
+        id="laudoView"
+        class="bg-gray-100 dark:bg-gray-900 p-4 rounded whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-100 max-h-96 overflow-y-auto"
+      >
+        <!-- The final, cleaned laudo appears here -->
         <span x-text="cleanedLaudo"></span>
       </div>
+
       <!-- Actions -->
       <div class="flex justify-end space-x-3">
-        <button @click="copyLaudo()"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-primary text-white hover:bg-hoverPrimary transition">
+        <button 
+          @click="copyLaudo()"
+          class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-primary text-white hover:bg-hoverPrimary transition"
+        >
           <i class="fas fa-copy mr-2"></i> Copiar
         </button>
-        <button @click="goToEditor()"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-secondary text-white hover:bg-blue-600 transition">
+        <button 
+          @click="goToEditor()"
+          class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-secondary text-white hover:bg-blue-600 transition"
+        >
           <i class="fas fa-edit mr-2"></i> Editar no Editor
         </button>
       </div>
@@ -66,24 +76,32 @@
         <i class="fas fa-lightbulb mr-2 text-yellow-400"></i>
         <span>Edite o texto do laudo conforme desejar.</span>
       </div>
+
       <!-- Editor Container -->
       <div class="relative">
         <div class="absolute right-2 top-2 text-xs text-gray-400 dark:text-gray-500">
           Caracteres: <span x-text="editorLength"></span>
         </div>
-        <textarea id="editorArea" x-model="editorContent"
-                  class="w-full h-56 p-3 bg-gray-100 dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-100 rounded border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-pre-wrap"
-                  @input="updateLength()">
-        </textarea>
+        <textarea 
+          id="editorArea" 
+          x-model="editorContent"
+          @input="updateLength()"
+          class="w-full h-56 p-3 bg-gray-100 dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-100 rounded border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-pre-wrap"
+        ></textarea>
       </div>
+
       <!-- Editor Actions -->
       <div class="flex justify-end space-x-3">
-        <button @click="copyEditor()"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-primary text-white hover:bg-hoverPrimary transition">
+        <button
+          @click="copyEditor()"
+          class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-primary text-white hover:bg-hoverPrimary transition"
+        >
           <i class="fas fa-copy mr-2"></i> Copiar
         </button>
-        <button @click="saveLaudo()"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-green-600 text-white hover:bg-green-700 transition">
+        <button
+          @click="saveLaudo()"
+          class="inline-flex items-center px-4 py-2 text-sm font-medium rounded bg-green-600 text-white hover:bg-green-700 transition"
+        >
           <i class="fas fa-save mr-2"></i> Salvar
         </button>
       </div>
@@ -91,38 +109,48 @@
   </div>
 
   <!-- Loading Spinner (conditional) -->
-  <div x-show="isLoading"
-       class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
-       style="display: none;">
+  <div 
+    x-show="isLoading"
+    class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
+    style="display: none;"
+  >
     <div class="bg-white dark:bg-gray-800 p-4 rounded shadow flex flex-col items-center space-y-2">
       <svg class="w-8 h-8 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10"
-                stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373..."></path>
+        <circle 
+          class="opacity-25" 
+          cx="12" cy="12" r="10"
+          stroke="currentColor" stroke-width="4"
+        ></circle>
+        <path 
+          class="opacity-75" 
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373... etc"
+        ></path>
       </svg>
       <p class="text-sm text-gray-600 dark:text-gray-200">Processando...</p>
     </div>
   </div>
 
   <!-- Notification Toast -->
-  <div x-show="showNotification"
-       x-transition:enter="transition ease-out duration-300"
-       x-transition:enter-start="opacity-0 transform scale-90"
-       x-transition:enter-end="opacity-100 transform scale-100"
-       x-transition:leave="transition ease-in duration-300"
-       x-transition:leave-start="opacity-100 transform scale-100"
-       x-transition:leave-end="opacity-0 transform scale-90"
-       class="fixed bottom-4 right-4 bg-green-500 text-white rounded px-4 py-3 shadow-lg z-50"
-       style="display: none;">
+  <div 
+    x-show="showNotification"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 transform scale-90"
+    x-transition:enter-end="opacity-100 transform scale-100"
+    x-transition:leave="transition ease-in duration-300"
+    x-transition:leave-start="opacity-100 transform scale-100"
+    x-transition:leave-end="opacity-0 transform scale-90"
+    class="fixed bottom-4 right-4 bg-green-500 text-white rounded px-4 py-3 shadow-lg z-50"
+    style="display: none;"
+  >
     <div class="flex items-center">
       <i class="fas fa-check-circle mr-2"></i>
       <span x-text="notificationMessage"></span>
     </div>
   </div>
 </div>
-
 {% endblock %}
+
 
 {% block extra_scripts %}
 <script>
@@ -132,39 +160,43 @@
       isLoading: false,
       showNotification: false,
       notificationMessage: '',
-      rawLaudo: `{{ laudo | escape | replace("\n", "\\n") }}`, 
+      // Put the laudo in a JS string, escaping quotes & newlines
+      rawLaudo: `{{ laudo | escape | replace("\n","\\n") }}`,
       cleanedLaudo: '',
       editorContent: '',
       editorLength: 0,
 
       init() {
-        // 1) Remove entire blocks <tag>...</tag> (including multiline).
-        // 2) Remove leftover <tag> if not closed or partial.
-        // Ensures ANY text inside tags is removed.
-
-        let laudoStep1 = this.rawLaudo.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, '');
-        let laudoStep2 = laudoStep1.replace(/<[^>]*>/g, '');
-
-        this.cleanedLaudo = laudoStep2.trim();
+        // 1) Remove entire blocks <tag>...</tag> (including multiline)
+        let step1 = this.rawLaudo.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, '');
+        // 2) Remove leftover single tags like <anything>
+        let step2 = step1.replace(/<[^>]*>/g, '');
+        
+        this.cleanedLaudo = step2.trim();
         this.editorContent = this.cleanedLaudo;
         this.updateLength();
       },
+
       updateLength() {
         this.editorLength = this.editorContent.length;
       },
+
       copyLaudo() {
         navigator.clipboard.writeText(this.cleanedLaudo)
           .then(() => this.showAlert('Laudo copiado!'))
           .catch(() => this.showAlert('Erro ao copiar o laudo.'));
       },
+
       goToEditor() {
         this.activeTab = 'editor';
       },
+
       copyEditor() {
         navigator.clipboard.writeText(this.editorContent)
           .then(() => this.showAlert('Texto copiado do editor!'))
           .catch(() => this.showAlert('Erro ao copiar do editor.'));
       },
+
       saveLaudo() {
         this.isLoading = true;
         fetch('{{ url_for("save_laudo") }}', {
@@ -190,6 +222,7 @@
           this.showAlert('Falha na requisição. Tente novamente.');
         });
       },
+
       showAlert(msg) {
         this.notificationMessage = msg;
         this.showNotification = true;
