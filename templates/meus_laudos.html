@@ -46,25 +46,97 @@
     {% else %}
     <p class="text-center text-gray-600 dark:text-gray-400">Nenhum laudo encontrado.</p>
     {% endif %}
+
+    <div id="paginationControls" class="mt-8 flex justify-center items-center space-x-4">
+        <button id="prevPage" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 transition-all duration-300">Anterior</button>
+        <span id="pageInfo" class="text-gray-700 dark:text-gray-300"></span>
+        <button id="nextPage" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 transition-all duration-300">Próxima</button>
+    </div>
 </div>
 
 <script>
     const laudoCards = document.querySelectorAll('[id^="report-card-"]');
     const searchInput = document.getElementById('searchLaudos');
+    const laudoGrid = document.getElementById('laudoGrid');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const pageInfo = document.getElementById('pageInfo');
 
-    function performSearch() {
-        const searchValue = searchInput.value.toLowerCase();
-        laudoCards.forEach(card => {
-            const title = card.querySelector('h3').textContent.toLowerCase();
-            const content = card.querySelector('p').textContent.toLowerCase();
-            if (title.includes(searchValue) || content.includes(searchValue)) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
-            }
-        });
+    let currentPage = 1;
+    const itemsPerPage = 9;
+    let filteredLaudos = Array.from(laudoCards);
+
+    function updatePagination() {
+        const totalPages = Math.ceil(filteredLaudos.length / itemsPerPage);
+        pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage === totalPages;
     }
 
+    function changePage(direction) {
+        currentPage += direction;
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        laudoCards.forEach(card => card.classList.add('hidden'));
+        filteredLaudos.slice(startIndex, endIndex).forEach(card => card.classList.remove('hidden'));
+        updatePagination();
+    }
+
+    prevPageBtn.addEventListener('click', () => changePage(-1));
+    nextPageBtn.addEventListener('click', () => changePage(1));
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    const performSearch = debounce(() => {
+        const searchValue = searchInput.value.toLowerCase();
+        filteredLaudos = Array.from(laudoCards).filter(card => {
+            const title = card.querySelector('h3').textContent.toLowerCase();
+            const content = card.querySelector('p').textContent.toLowerCase();
+            return title.includes(searchValue) || content.includes(searchValue);
+        });
+
+        laudoCards.forEach(card => card.classList.add('hidden'));
+        currentPage = 1;
+        filteredLaudos.slice(0, itemsPerPage).forEach(card => card.classList.remove('hidden'));
+        updatePagination();
+    }, 300);
+
     searchInput.addEventListener('input', performSearch);
+
+    function toggleLaudo(index) {
+        const laudo = document.getElementById(`laudo-${index}`);
+        const card = document.getElementById(`report-card-${index}`);
+        const button = card.querySelector('button');
+        laudo.classList.toggle('hidden');
+        card.classList.toggle('shadow-xl');
+        button.setAttribute('aria-expanded', laudo.classList.contains('hidden') ? 'false' : 'true');
+        button.textContent = laudo.classList.contains('hidden') ? 'Ver Laudo Completo' : 'Ocultar Laudo';
+    }
+
+    // Inicialização
+    laudoCards.forEach((card, index) => {
+        if (index >= itemsPerPage) {
+            card.classList.add('hidden');
+        }
+    });
+    updatePagination();
+
+    // Lazy loading para laudos
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate__animated', 'animate__fadeIn');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+
+    laudoCards.forEach(card => observer.observe(card));
 </script>
 {% endblock %}
